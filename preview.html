@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>邻里同好社区 · 3D 物件预览</title>
+<style>
+  :root{
+    --bg:#0b0a13; --panel:rgba(255,255,255,0.06);
+    --accent:#ff7a5c; --accent2:#5ce1e6; --text:#e9e9f2; --muted:#8a8a9c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;font-family:'Segoe UI','PingFang SC',system-ui,sans-serif;
+    color:var(--text);overflow:hidden;background:var(--bg)}
+  #app{display:flex;height:100vh}
+  /* 侧栏 */
+  #sidebar{width:320px;flex-shrink:0;display:flex;flex-direction:column;
+    background:linear-gradient(180deg,#14121e,#0a0910);
+    border-right:1px solid rgba(255,255,255,.08)}
+  #sidebar h1{font-size:15px;padding:20px 20px 6px;letter-spacing:1px;color:#fff}
+  #sidebar .sub{font-size:11px;color:var(--muted);padding:0 20px 14px}
+  #list{flex:1;overflow-y:auto;padding:0 12px 24px}
+  .item{display:flex;align-items:center;gap:11px;padding:11px 12px;margin-bottom:6px;
+    border-radius:10px;cursor:pointer;transition:.15s;border:1px solid transparent}
+  .item:hover{background:rgba(255,255,255,.05)}
+  .item.active{background:linear-gradient(90deg,rgba(255,122,92,.18),rgba(92,225,230,.08));
+    border-color:rgba(255,122,92,.4)}
+  .item .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;
+    box-shadow:0 0 8px var(--accent)}
+  .item .meta{flex:1;min-width:0}
+  .item .name{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .item .tag{font-size:10px;color:var(--muted);margin-top:2px}
+  /* 舞台 */
+  #stage{flex:1;position:relative;
+    background:radial-gradient(120% 120% at 70% 20%,#1a1530 0%,#0b0a13 55%);}
+  #c{width:100%;height:100%;display:block}
+  #toolbar{position:absolute;right:18px;top:18px;display:flex;gap:8px}
+  .btn{background:var(--panel);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12);
+    color:var(--text);padding:8px 14px;border-radius:10px;font-size:12px;cursor:pointer;transition:.15s}
+  .btn:hover{border-color:var(--accent)}
+  .btn.on{background:linear-gradient(90deg,rgba(255,122,92,.25),rgba(92,225,230,.12));border-color:var(--accent)}
+  #hud{position:absolute;left:18px;bottom:18px;background:var(--panel);backdrop-filter:blur(8px);
+    border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:13px 17px;font-size:12px;max-width:360px}
+  #hud .t{font-size:15px;font-weight:600;margin-bottom:5px;color:#fff}
+  #hud .info{color:var(--muted);line-height:1.7}
+  #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:13px;color:var(--muted);pointer-events:none;opacity:0;transition:.2s}
+  #loading.show{opacity:1}
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <h1>邻里同好社区 · 物件预览</h1>
+    <div class="sub">CC0 开源模型 · 14 件 · 点击切换旋转查看</div>
+    <div id="list"></div>
+  </aside>
+  <div id="stage">
+    <canvas id="c"></canvas>
+    <div id="toolbar">
+      <button class="btn on" id="btnRotate">自动旋转</button>
+      <button class="btn on" id="btnGrid">网格</button>
+      <button class="btn" id="btnAll">全部陈列</button>
+    </div>
+    <div id="hud"><div class="t" id="hudTitle">—</div><div class="info" id="hudInfo">从左侧选择一件物件开始查看</div></div>
+    <div id="loading">加载中…</div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+const MODELS = [
+  {file:'assets/glb/chromatic-chaos__Building_Corner_01.glb',  name:'楼体 A1 · 转角楼',   tag:'建筑主体', role:'社区建筑 · 转角单元，可重复拼出楼群'},
+  {file:'assets/glb/chromatic-chaos__Building_Rect_01.glb',    name:'楼体 A2 · 标准楼',   tag:'建筑主体', role:'社区建筑 · 主楼体，占沙盘多数立面'},
+  {file:'assets/glb/chromatic-chaos__Building_Vapor_Ramp_01.glb',name:'楼体 A3 · 坡道楼',  tag:'建筑主体', role:'社区建筑 · 带连廊/坡道，丰富天际线'},
+  {file:'assets/glb/tomb-chaser-2__ElectricPost01_Art.glb',    name:'路灯 P2',             tag:'环境道具', role:'街道照明 · 霓虹灯柱，夜晚点亮氛围'},
+  {file:'assets/glb/tomb-chaser-2__Grass01_Art.glb',           name:'植被 P1',             tag:'环境道具', role:'绿化点缀 · 草丛/芦苇，柔化街角'},
+  {file:'assets/glb/chromatic-chaos__Pot_Vapor_01.glb',        name:'盆栽 P6 / S5',        tag:'技能物件', role:'多肉交换技能浮标本体（S5）'},
+  {file:'assets/glb/chromatic-chaos__Pot_Retro_03.glb',        name:'盆栽 · 复古款',       tag:'环境道具', role:'花箱/窗台盆栽，替代花箱道具'},
+  {file:'assets/glb/chromatic-chaos__CellPhone_Retro.glb',     name:'手机 S3',             tag:'技能物件', role:'教长辈用手机技能浮标本体（S3）'},
+  {file:'assets/glb/chromatic-chaos__Floor_Vapor_01.glb',      name:'地面 E1',             tag:'场景基底', role:'发光网格地面，铺满沙盘底版'},
+  {file:'assets/glb/chromatic-chaos__Frame_Neon_Vapor_01.glb', name:'霓虹灯牌',           tag:'氛围',    role:'休闲区霓虹装饰，强化赛博感'},
+  {file:'assets/glb/chromatic-chaos__Column_Vapor_01.glb',     name:'霓虹柱',             tag:'氛围',    role:'广场立柱，罩霓虹光，作地标'},
+  {file:'assets/glb/tomb-chaser-2__Column01_Art.glb',          name:'石柱',               tag:'氛围',    role:'日式霓虹柱构件，混搭风格'},
+  {file:'assets/glb/tomb-chaser-2__TempleRoof01_Art.glb',      name:'霓虹屋顶',           tag:'氛围',    role:'地标顶盖，可罩在楼顶做发光顶'},
+  {file:'assets/glb/tomb-chaser-2__Rock01_Art.glb',            name:'岩石',               tag:'环境道具', role:'景观石/挡土，丰富地景层次'},
+];
+
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+camera.position.set(0, 2.2, 8);
+
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 1.2;
+controls.minDistance = 2;
+controls.maxDistance = 40;
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dir = new THREE.DirectionalLight(0xffffff, 1.0);
+dir.position.set(5, 10, 7); scene.add(dir);
+const pWarm = new THREE.PointLight(0xff7a5c, 0.9, 60); pWarm.position.set(-6, 4, 3); scene.add(pWarm);
+const pCool = new THREE.PointLight(0x5ce1e6, 0.9, 60); pCool.position.set(6, 3, -4); scene.add(pCool);
+
+const grid = new THREE.GridHelper(40, 40, 0x444477, 0x222244);
+grid.material.opacity = 0.28; grid.material.transparent = true; scene.add(grid);
+
+const holder = new THREE.Group(); scene.add(holder);
+
+const loader = new GLTFLoader();
+const cache = {};
+
+function disposeObj(o){
+  o.traverse(n=>{
+    if(n.geometry) n.geometry.dispose();
+    if(n.material){
+      const m = Array.isArray(n.material)?n.material:[n.material];
+      m.forEach(x=>{ if(x.map) x.map.dispose(); x.dispose(); });
+    }
+  });
+}
+function clearHolder(){
+  while(holder.children.length){
+    const c = holder.children.pop();
+    holder.remove(c); disposeObj(c);
+  }
+}
+function frame(obj, fit){
+  const box = new THREE.Box3().setFromObject(obj);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  obj.position.sub(center);
+  const maxDim = Math.max(size.x, size.y, size.z) || 1;
+  obj.scale.setScalar(fit / maxDim);
+}
+function getScene(file){
+  if(cache[file]) return cache[file].clone(true);
+  return new Promise((res, rej)=>{
+    loader.load(file, g=>{ cache[file]=g.scene; res(g.scene.clone(true)); }, undefined, rej);
+  });
+}
+
+const loading = document.getElementById('loading');
+function showLoading(v){ loading.classList.toggle('show', v); }
+
+const hudTitle = document.getElementById('hudTitle');
+const hudInfo  = document.getElementById('hudInfo');
+function updateHud(m){ hudTitle.textContent = m.name; hudInfo.textContent = `${m.tag} · ${m.role}`; }
+
+async function showOne(m){
+  showLoading(true); clearHolder();
+  try{
+    const obj = await getScene(m.file);
+    frame(obj, 3); holder.add(obj);
+    controls.target.set(0,0,0);
+    camera.position.set(0, 1.6, 8);
+    updateHud(m);
+  }catch(e){ hudInfo.textContent = '加载失败：'+e.message; }
+  showLoading(false);
+}
+
+async function showAll(){
+  showLoading(true); clearHolder();
+  const n = MODELS.length, cols = 4, gap = 2.6;
+  const offX = (cols-1)*gap/2, rows = Math.ceil(n/cols), offZ = (rows-1)*gap/2;
+  for(let i=0;i<n;i++){
+    try{
+      const obj = await getScene(MODELS[i].file);
+      frame(obj, 1.4);
+      obj.position.set((i%cols)*gap - offX, 0, Math.floor(i/cols)*gap - offZ);
+      holder.add(obj);
+    }catch(e){ console.warn('skip', MODELS[i].file, e); }
+  }
+  controls.target.set(0,0,0);
+  camera.position.set(0, 9, 15);
+  hudTitle.textContent = '全部陈列 · 14 件';
+  hudInfo.textContent = '社区物件一览 · 点击左侧回到单件查看';
+  showLoading(false);
+}
+
+// 侧栏列表
+const listEl = document.getElementById('list');
+MODELS.forEach((m, i)=>{
+  const el = document.createElement('div');
+  el.className = 'item' + (i===0?' active':'');
+  el.innerHTML = `<span class="dot"></span><div class="meta"><div class="name">${m.name}</div><div class="tag">${m.tag}</div></div>`;
+  el.onclick = ()=>{
+    document.querySelectorAll('.item').forEach(x=>x.classList.remove('active'));
+    el.classList.add('active');
+    showOne(m);
+  };
+  listEl.appendChild(el);
+});
+
+// 工具栏
+const btnRotate = document.getElementById('btnRotate');
+const btnGrid   = document.getElementById('btnGrid');
+const btnAll    = document.getElementById('btnAll');
+btnRotate.onclick = ()=>{ controls.autoRotate=!controls.autoRotate; btnRotate.classList.toggle('on', controls.autoRotate); };
+btnGrid.onclick   = ()=>{ grid.visible=!grid.visible; btnGrid.classList.toggle('on', grid.visible); };
+let allMode=false;
+btnAll.onclick = ()=>{
+  allMode=!allMode;
+  btnAll.classList.toggle('on', allMode);
+  if(allMode) showAll();
+  else { document.querySelector('.item').click(); }
+};
+
+// 自适应
+function resize(){
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if(canvas.width!==w||canvas.height!==h){
+    renderer.setSize(w, h, false);
+    camera.aspect = w/h; camera.updateProjectionMatrix();
+  }
+}
+function animate(){ resize(); controls.update(); renderer.render(scene, camera); requestAnimationFrame(animate); }
+animate();
+
+// 首屏
+showOne(MODELS[0]);
+</script>
+</body>
+</html>

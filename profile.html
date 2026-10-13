@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>个人中心 · 微光社区</title>
+<link rel="stylesheet" href="./css/site.css">
+<style>
+/* ============ 个人中心专属样式（pf- 前缀，避免与全站类冲突） ============ */
+.pf{max-width:1100px}
+
+/* 注意：这里不能用 overflow:hidden —— 否则头像选择面板（含"上传照片"按钮）
+   会被裁在头卡内部，用户看不到按钮。改用给封面单独加圆角来实现同样的裁切效果。 */
+.pf-hero{background:var(--panel);border:1px solid var(--line);border-radius:18px;position:relative}
+.pf-cover{height:108px;background:linear-gradient(105deg,rgba(255,122,92,.42),rgba(179,136,255,.26) 48%,rgba(92,225,230,.24));
+  position:relative;border-radius:17px 17px 0 0}
+.pf-cover::after{content:'微光社区 · LUMINA COMMONS';position:absolute;right:20px;bottom:12px;
+  font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.55)}
+.pf-hero-body{display:flex;align-items:flex-end;gap:18px;padding:0 22px;margin-top:-42px}
+.pf-avatar{width:84px;height:84px;border-radius:50%;flex:none;background:var(--panel-solid);
+  border:3px solid var(--bg);display:flex;align-items:center;justify-content:center;font-size:42px;
+  box-shadow:0 6px 20px rgba(0,0,0,.35);cursor:pointer;position:relative;transition:.15s}
+  .pf-avatar:hover{border-color:var(--accent);transform:scale(1.05)}
+  .pf-avatar .pen{position:absolute;right:-2px;bottom:-2px;width:26px;height:26px;border-radius:50%;
+  background:var(--accent);color:#0b0a13;display:flex;align-items:center;justify-content:center;
+  font-size:13px;border:2px solid var(--bg)}
+  /* 头像选择弹层 */
+  .pf-avatar-picker{position:absolute;left:0;top:calc(100% + 8px);z-index:30;
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;
+  box-shadow:0 16px 40px rgba(0,0,0,.55);display:none;width:300px}
+  .pf-avatar-picker.show{display:block;animation:afpop .18s ease}
+  .pf-avatar-picker .ap-title{font-size:12px;color:var(--muted);margin-bottom:10px}
+  .pf-avatar-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
+  .pf-avatar-grid button{width:32px;height:32px;border-radius:8px;border:1px solid transparent;
+  background:var(--panel-solid);font-size:18px;cursor:pointer;transition:.1s;
+  display:flex;align-items:center;justify-content:center}
+  .pf-avatar-grid button:hover{border-color:var(--accent);transform:scale(1.12)}
+  .pf-avatar-grid button.on{border-color:var(--accent);background:var(--accent);color:#0b0a13}
+  .pf-avatar-face{width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+    border-radius:50%;overflow:hidden;font-size:42px}
+  .pf-avatar-upload{width:100%;margin-top:10px;padding:8px;border:1px dashed var(--line);border-radius:9px;
+    background:var(--panel-solid);color:var(--text);font-size:12px;cursor:pointer;font-family:inherit;transition:.15s}
+  .pf-avatar-upload:hover{border-color:var(--accent);color:var(--accent)}
+.pf-hero-info{flex:1;min-width:0;padding-bottom:8px}
+.pf-name-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pf-name-row h1{font-size:23px;font-weight:700;letter-spacing:.5px}
+.pf-age-badge{font-size:12px;color:var(--accent2);border:1px solid rgba(92,225,230,.35);
+  background:rgba(92,225,230,.1);border-radius:999px;padding:2px 10px}
+.pf-sign{font-size:13px;color:#c8c8d8;margin-top:5px;line-height:1.6;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pf-contact{font-size:12px;color:var(--muted);margin-top:3px}
+.pf-hero-body .btn{flex:none;margin-bottom:8px}
+.pf-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:18px 22px 20px;margin-top:6px}
+.pf-stat{background:var(--panel-solid);border:1px solid var(--line);border-radius:12px;
+  padding:11px 8px;text-align:center}
+.pf-stat .v{font-size:21px;font-weight:700;color:#fff;line-height:1.2}
+.pf-stat .k{font-size:11px;color:var(--muted);margin-top:3px;letter-spacing:.5px}
+
+/* —— 双栏骨架 —— */
+.pf-layout{display:grid;grid-template-columns:1fr 300px;gap:18px;margin-top:18px;align-items:start}
+.pf-main{display:flex;flex-direction:column;gap:18px;min-width:0}
+.pf-rail{display:flex;flex-direction:column;gap:18px;min-width:0}
+.pf-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+.pf-card h2{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.pf-card h2 .cnt{margin-left:auto;font-size:12px;color:var(--muted);font-weight:400}
+.pf-card h2 .more{font-size:12px;color:var(--accent);font-weight:400}
+.pf-card h2 .more:hover{text-decoration:underline}
+
+/* —— ③ 技能展示砖 —— */
+.pf-skill-grid{display:flex;flex-wrap:wrap;gap:9px}
+.pf-skill-tile{font-size:13px;background:var(--panel-solid);border:1px solid var(--line);
+  border-radius:10px;padding:8px 13px;color:var(--text)}
+.pf-skill-tile b{color:var(--warn);margin-right:5px}
+
+/* —— 成员行（「我的关注」列表用） —— */
+.pf-friend{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:11px;
+  transition:.15s;cursor:pointer}
+.pf-friend:hover{background:var(--panel-solid)}
+.pf-friend .fa{width:40px;height:40px;flex:none;border-radius:50%;background:var(--panel-solid);
+  border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:20px}
+.pf-friend .fn{font-size:13.5px;font-weight:600}
+.pf-friend .fz{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5}
+.pf-footlink{display:block;text-align:center;font-size:12px;color:var(--accent);
+  border-top:1px solid var(--line);padding-top:12px;margin-top:8px}
+.pf-footlink:hover{text-decoration:underline}
+
+/* —— 我的关注（列表） —— */
+.pf-friend .fcol{flex:1;min-width:0;display:flex;flex-direction:column}
+.pf-friend .fcol .fn,.pf-friend .fcol .fz{display:block}
+.pf-unfollow{flex:none;font-size:11px;color:var(--muted);background:transparent;
+  border:1px solid var(--line);border-radius:8px;padding:5px 11px;cursor:pointer;
+  font-family:inherit;transition:.15s}
+.pf-unfollow:hover{color:#ff5c5c;border-color:#ff5c5c;background:rgba(255,92,92,.1)}
+
+/* —— ⑤ 我的发布 —— */
+.pf-pub{display:block;border:1px solid var(--line);border-radius:11px;padding:11px 13px;
+  margin-bottom:9px;transition:.15s}
+.pf-pub:hover{border-color:rgba(255,122,92,.4);background:var(--panel-solid)}
+.pf-pub .pt{font-size:13.5px;font-weight:600;line-height:1.5}
+.pf-pub .pd{font-size:12px;color:var(--muted);line-height:1.6;margin-top:4px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pf-pub .pm{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.pf-pub .pm .tm{margin-left:auto;font-size:11px;color:var(--muted)}
+.pf-pubsub{font-size:12px;color:var(--accent2);letter-spacing:.5px;margin:14px 0 8px}
+.pf-pubsub:first-child{margin-top:0}
+
+/* —— ⑥ 资料完整度 —— */
+.pf-ringrow{display:flex;align-items:center;gap:16px}
+.pf-ring{width:80px;height:80px;border-radius:50%;flex:none;position:relative;
+  background:conic-gradient(var(--accent) 0deg,rgba(255,255,255,.08) 0deg)}
+.pf-ring::before{content:'';position:absolute;inset:8px;border-radius:50%;background:var(--panel-solid)}
+.pf-ring .rv{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.pf-ring .rv b{font-size:19px;font-weight:700;color:#fff;line-height:1}
+.pf-ring .rv small{font-size:10px;color:var(--muted);margin-top:3px}
+.pf-checks{flex:1;display:flex;flex-direction:column;gap:7px;min-width:0}
+.pf-check{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#c8c8d8}
+.pf-check .box{width:17px;height:17px;flex:none;border-radius:5px;border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;font-size:10px;color:#0b0a13}
+.pf-check.ok .box{background:var(--ok);border-color:var(--ok)}
+.pf-check .go{margin-left:auto;font-size:11px;color:var(--accent);cursor:pointer;white-space:nowrap}
+.pf-check .go:hover{text-decoration:underline}
+
+/* —— ⑦ 徽章 —— */
+.pf-badges{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.pf-badge{text-align:center;padding:10px 4px 8px;border-radius:11px;
+  background:var(--panel-solid);border:1px solid var(--line);position:relative;
+  cursor:help;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.pf-badge .bi{font-size:24px;line-height:1}
+.pf-badge .bt{font-size:11.5px;font-weight:600;margin-top:6px;line-height:1.4}
+.pf-badge.off .bi{opacity:.32;filter:grayscale(1)}
+.pf-badge.off .bt{color:var(--muted);font-weight:400;opacity:.5}
+
+/* 点亮的徽章：悬停时放大 + 颜色突出 + 闪一下后恢复 */
+.pf-badge:not(.off):hover{transform:scale(1.16);border-color:var(--accent);
+  box-shadow:0 0 0 2px var(--accent),0 8px 24px rgba(255,122,92,.35);
+  animation:badgePop .5s ease}
+@keyframes badgePop{
+  0%{transform:scale(1)}
+  35%{transform:scale(1.22);box-shadow:0 0 0 3px var(--accent),0 0 20px rgba(255,122,92,.55)}
+  70%{transform:scale(1.14)}
+  100%{transform:scale(1.16)}
+}
+.pf-badge:not(.off):hover .bi{filter:drop-shadow(0 0 6px var(--accent))}
+
+/* 新点亮徽章：跳两下 + 逐渐涂抹上色 + 贴回原位 */
+.pf-badge.just-lit{animation:badgeJustLit 1.4s cubic-bezier(.34,1.56,.64,1) forwards;z-index:5}
+@keyframes badgeJustLit{
+  0%{transform:scale(1) translateY(0);filter:grayscale(1);opacity:.32}
+  12%{transform:scale(1.28) translateY(-10px);filter:grayscale(.7);opacity:.6}
+  24%{transform:scale(1.05) translateY(0);filter:grayscale(.5);opacity:.7}
+  40%{transform:scale(1.26) translateY(-8px);filter:grayscale(.25);opacity:.85}
+  56%{transform:scale(1.08) translateY(0);filter:grayscale(.1);opacity:.9}
+  72%{transform:scale(1.16) translateY(-4px);filter:grayscale(0);opacity:1;
+    box-shadow:0 0 0 3px var(--accent),0 0 24px rgba(255,122,92,.6)}
+  88%{transform:scale(1.02) translateY(0);box-shadow:0 0 0 1px var(--accent),0 4px 12px rgba(255,122,92,.2)}
+  100%{transform:scale(1) translateY(0);filter:grayscale(0);opacity:1;box-shadow:none}
+}
+
+/* 悬停说明 tooltip */
+.pf-badge .bm-tip{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);
+  background:var(--panel-solid,#1b1f1d);border:1px solid var(--line);border-radius:10px;
+  padding:8px 12px;width:200px;font-size:11.5px;font-weight:400;line-height:1.6;
+  color:#c8c8d8;text-align:center;z-index:20;opacity:0;pointer-events:none;
+  transition:opacity .15s ease;box-shadow:0 10px 28px rgba(0,0,0,.5);
+  filter:none!important}
+.pf-badge:hover .bm-tip{opacity:1}
+.pf-badge .bm-tip::after{content:'';position:absolute;top:100%;left:50%;
+  transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--line)}
+.pf-badge .bm-tip b{display:block;font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px}
+.pf-badge .bm-tip .cond{color:var(--muted)}
+.pf-badge:not(.off) .bm-tip .cond{color:var(--ok,#6fbf6f)}
+
+/* —— ⑧ 分区与名片信息 —— */
+.pf-info-row{display:flex;align-items:flex-start;gap:9px;font-size:12.5px;
+  padding:9px 0;border-bottom:1px dashed var(--line)}
+.pf-info-row:last-child{border-bottom:none;padding-bottom:0}
+.pf-info-row .ik{color:var(--muted);flex:none;min-width:62px}
+.pf-info-row .iv{color:var(--text);line-height:1.6;word-break:break-all}
+.pf-info-row .iv a{color:var(--accent)}
+.pf-zones{display:flex;flex-wrap:wrap;gap:6px}
+
+@media (max-width:960px){
+  .pf-layout{grid-template-columns:1fr}
+  .pf-stats{grid-template-columns:repeat(2,1fr)}
+  .pf-hero-body{flex-wrap:wrap}
+  .pf-hero-body .btn{margin-bottom:10px}
+}
+</style>
+</head>
+<body data-nav="profile">
+<script>
+/* 防呆守卫：file:// 双击打开时 ES Module 会被浏览器拦截 → 白屏。见 index.html 说明。 */
+if (location.protocol === 'file:') {
+  document.addEventListener('DOMContentLoaded', function () {
+    var d = document.createElement('div');
+    d.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#16121f;color:#fff;display:flex;align-items:center;justify-content:center;padding:40px;font:14px/1.9 system-ui,"Microsoft YaHei",sans-serif;overflow:auto';
+    d.innerHTML = '<div style="max-width:640px">'
+      + '<div style="font-size:36px">⚠️</div>'
+      + '<h2 style="margin:12px 0 16px;font-size:21px">这个页面不能直接双击打开</h2>'
+      + '<p style="color:#b9b4c8">当前地址是 <code style="color:#ff7a5c">file://</code> 协议，浏览器会拦截 ES 模块脚本，所以页面加载不出来——文件本身没坏。</p>'
+      + '<p style="color:#b9b4c8;margin-top:16px"><b style="color:#5ce1e6">正确打开方式：</b>双击项目里的 <b style="color:#fff">启动服务器.bat</b>，再访问 <code style="color:#ff7a5c">http://localhost:8000/index.html</code></p>'
+      + '</div>';
+    document.body.appendChild(d);
+  });
+}
+</script>
+
+<div class="wrap pf">
+  <h1 class="page-title">个人中心</h1>
+  <p class="page-sub">你的微光名片。填好技能与空闲时间，系统会自动把你归到社区里对应的建筑。</p>
+
+  <!-- ① 个人主页头卡 -->
+  <section class="pf-hero" style="margin-top:22px">
+    <div class="pf-cover"></div>
+    <div class="pf-hero-body">
+      <div class="pf-avatar" id="pf-avatar" title="点击换头像"><span class="pf-avatar-face" id="pf-avatar-face">🙂</span><span class="pen">✏</span>
+        <div class="pf-avatar-picker" id="pf-avatar-picker">
+          <div class="ap-title">选一个 emoji，或上传自己的照片</div>
+          <div class="pf-avatar-grid" id="pf-avatar-grid"></div>
+          <button class="pf-avatar-upload" id="pf-avatar-upload" type="button">📷 上传照片</button>
+          <input type="file" id="pf-avatar-file" accept="image/*" hidden>
+        </div>
+      </div>
+      <div class="pf-hero-info">
+        <div class="pf-name-row">
+          <h1 id="pf-name">未命名居民</h1>
+          <span class="pf-age-badge" id="pf-age" style="display:none"></span>
+        </div>
+        <div class="pf-sign" id="pf-sign">完善名片后，这里会显示你的社区身份。</div>
+        <div class="pf-contact" id="pf-contact">💬 未留联系方式</div>
+      </div>
+      <button class="btn primary" id="pf-edit-btn">✏️ 编辑名片</button>
+    </div>
+    <div class="pf-stats">
+      <div class="pf-stat"><div class="v" id="pf-st-skill">0</div><div class="k">技能</div></div>
+      <div class="pf-stat"><div class="v" id="pf-st-zone">0</div><div class="k">所属分区</div></div>
+      <div class="pf-stat"><div class="v" id="pf-st-free">0</div><div class="k">空闲时段</div></div>
+      <div class="pf-stat"><div class="v" id="pf-st-letter">0</div><div class="k">搭子帖</div></div>
+    </div>
+  </section>
+
+  <div class="pf-layout">
+    <!-- ============ 左主栏 ============ -->
+    <main class="pf-main">
+
+      <!-- ② 编辑我的名片（保留原有全部表单功能，普通输入框） -->
+      <section class="pf-card" id="pf-edit">
+        <h2>📝 编辑我的名片</h2>
+
+        <div class="field">
+          <label>姓名</label>
+          <input type="text" id="f-name" placeholder="例如：小林">
+        </div>
+        <div class="field">
+          <label>年龄</label>
+          <input type="number" id="f-age" placeholder="例如：20" min="0" max="120">
+        </div>
+        <div class="field">
+          <label>联系方式</label>
+          <input type="text" id="f-contact" placeholder="微信 / 手机号 / 邮箱">
+        </div>
+
+        <div class="field" style="margin-top:18px">
+          <label>已添加技能（点击可移除）</label>
+          <div class="chips" id="skill-chips"></div>
+        </div>
+        <div class="field">
+          <label>添加技能</label>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="f-skill" placeholder="输入技能后回车，如：编程 / 吉他 / 烘焙">
+            <button class="btn" id="add-skill">添加</button>
+          </div>
+          <div class="hint">常用：编程辅导 · 考研带背 · 吉他教学 · 篮球约局 · 宠物寄养 · 急救培训 · 3D 打印 · 厨艺教学</div>
+        </div>
+
+        <div class="field" style="margin-top:18px">
+          <label>勾选你通常方便的时间段（用于匹配重叠）</label>
+          <div class="timegrid" id="time-chips"></div>
+        </div>
+
+        <div class="btn-row" style="margin-top:8px">
+          <button class="btn primary" id="save">保存名片</button>
+          <button class="btn ghost" id="reset">清空</button>
+          <span id="saved" style="color:var(--ok);font-size:13px;align-self:center"></span>
+        </div>
+        <div id="zone-assign" style="margin-top:14px"></div>
+      </section>
+
+      <!-- ③ 我的技能 -->
+      <section class="pf-card">
+        <h2>✨ 我的技能 <span class="cnt" id="pf-skill-cnt">0 项</span></h2>
+        <div class="pf-skill-grid" id="pf-skills">
+          <span style="color:var(--muted);font-size:12.5px">还没添加技能，在上方名片里添加。</span>
+        </div>
+      </section>
+
+      <!-- 我的关注 -->
+      <section class="pf-card">
+        <h2>⭐ 我的关注 <span class="cnt" id="pf-follow-cnt"></span></h2>
+        <div id="pf-follows"></div>
+        <a class="pf-footlink" href="./skills.html">去技能广场关注更多伙伴 →</a>
+      </section>
+
+      <!-- ⑤ 我的发布 -->
+      <section class="pf-card">
+        <h2>📮 我的发布 <span class="cnt" id="pf-pub-cnt"></span></h2>
+        <div id="pf-pubs"></div>
+      </section>
+
+    </main>
+
+    <!-- ============ 右侧栏 ============ -->
+    <aside class="pf-rail">
+
+      <!-- ⑥ 资料完整度 -->
+      <section class="pf-card">
+        <h2>📊 资料完整度</h2>
+        <div class="pf-ringrow">
+          <div class="pf-ring" id="pf-ring"><div class="rv"><b id="pf-ring-v">0%</b><small>完善度</small></div></div>
+          <div class="pf-checks" id="pf-checks"></div>
+        </div>
+      </section>
+
+      <!-- ⑦ 我的徽章 -->
+      <section class="pf-card">
+        <h2>🏅 我的徽章</h2>
+        <div class="pf-badges" id="pf-badges"></div>
+      </section>
+
+      <!-- ⑧ 分区与名片信息 -->
+      <section class="pf-card">
+        <h2>🏷 分区与名片信息</h2>
+        <div class="pf-info-row"><span class="ik">所属分区</span><span class="iv" id="pf-info-zones">暂未分配</span></div>
+        <div class="pf-info-row"><span class="ik">联系方式</span><span class="iv" id="pf-info-contact">未填写</span></div>
+        <div class="pf-info-row"><span class="ik">空闲时段</span><span class="iv" id="pf-info-free">未选择</span></div>
+        <div class="pf-info-row"><span class="ik">加入时间</span><span class="iv" id="pf-info-joined">保存名片后记录</span></div>
+      </section>
+
+    </aside>
+  </div>
+
+  <div class="hint" style="margin-top:18px">数据仅存于本机浏览器（localStorage），不会上传。系统会按你的技能自动把你归类到对应建筑；保存后去 <a href="./sandbox.html" style="color:var(--accent)">沙盘</a> 点开那栋楼，就能看到你和同区伙伴的工牌墙。</div>
+</div>
+
+<script type="module">
+  import { mountNav } from './js/nav.js';
+  import { getProfile, saveProfile, upsertMe, getUsers, getLetters, getPosts, AVATAR_CHOICES, faceHTML, getFollows, toggleFollow } from './js/store.js';
+  import { classifySkills, ZONE_BY_ID } from './js/zones.js';
+  mountNav('profile');
+
+  const ZONE_ICON = { 1:'📚', 2:'🎮', 3:'🍜', 4:'🏀', 5:'🎨', 8:'🐾', 9:'❤️', 10:'🧹' };
+  const FREE_SLOTS = ['工作日上午','工作日下午','工作日晚间','工作日凌晨','周末上午','周末下午','周末晚间','周末凌晨'];
+
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmtTime = ts => {
+    const d = new Date(ts);
+    return `${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  };
+  const zoneTag = z => `<span class="tag" style="border-color:${z.theme}66;color:${z.theme};background:${z.theme}1f">${esc(z.name)}</span>`;
+
+  let p = getProfile();
+  let skills = p.skills || [];
+  let freeTime = p.freeTime || [];
+
+  /* ---------- 表单内部交互（普通输入框） ---------- */
+  function renderSkills() {
+    const box = $('skill-chips'); box.innerHTML = '';
+    skills.forEach((s, i) => {
+      const c = document.createElement('span'); c.className = 'chip on';
+      c.textContent = s + ' ✕';
+      c.onclick = () => { skills.splice(i, 1); renderSkills(); };
+      box.appendChild(c);
+    });
+    if (!skills.length) box.innerHTML = '<span style="color:var(--muted);font-size:12px">还没添加技能</span>';
+  }
+  function renderTime() {
+    const box = $('time-chips'); box.innerHTML = '';
+    FREE_SLOTS.forEach(s => {
+      const c = document.createElement('span');
+      c.className = 'chip' + (freeTime.includes(s) ? ' on' : '');
+      c.textContent = s;
+      c.onclick = () => {
+        if (freeTime.includes(s)) freeTime = freeTime.filter(x => x !== s);
+        else freeTime.push(s);
+        renderTime();
+      };
+      box.appendChild(c);
+    });
+  }
+  function addSkill() {
+    const v = $('f-skill').value.trim();
+    if (v && !skills.includes(v)) { skills.push(v); renderSkills(); }
+    $('f-skill').value = '';
+  }
+  $('add-skill').onclick = addSkill;
+  $('f-skill').addEventListener('keydown', e => { if (e.key === 'Enter') addSkill(); });
+
+  // 头卡「编辑名片」→ 平滑滚到表单
+  $('pf-edit-btn').onclick = () => {
+    $('pf-edit').scrollIntoView({ behavior:'smooth', block:'start' });
+    setTimeout(() => $('f-name').focus(), 450);
+  };
+
+  /* ---------- 派生数据 ---------- */
+  function derived() {
+    const zones = classifySkills(skills).map(id => ZONE_BY_ID[id]).filter(Boolean);
+    const myLetters = getLetters().filter(l => l.mine);
+    const myPosts = p.name ? getPosts().filter(x => x.author === p.name) : [];
+    return { zones, myLetters, myPosts };
+  }
+
+  /* ---------- 头像选择（emoji 或上传照片） ---------- */
+  const avatarGrid = $('pf-avatar-grid');
+  const avatarPicker = $('pf-avatar-picker');
+  const applyFace = (face) => {
+    p.face = face;
+    saveProfile(p);
+    upsertMe();
+    renderHero(derived());
+  };
+  AVATAR_CHOICES.forEach(f => {
+    const b = document.createElement('button');
+    b.textContent = f; b.dataset.f = f;
+    b.onclick = (e) => {
+      e.stopPropagation();
+      applyFace(f);
+      avatarGrid.querySelectorAll('button').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      setTimeout(() => avatarPicker.classList.remove('show'), 200);
+    };
+    avatarGrid.appendChild(b);
+  });
+  $('pf-avatar').onclick = (e) => {
+    e.stopPropagation();
+    avatarGrid.querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.f === (p.face || '🙂')));
+    avatarPicker.classList.toggle('show');
+  };
+  document.addEventListener('click', (e) => {
+    if (!$('pf-avatar').contains(e.target)) avatarPicker.classList.remove('show');
+  });
+
+  // 上传照片：居中裁成正方形并缩到 256px，转 jpeg dataURL 存进 face
+  function fileToAvatar(file, size = 256) {
+    return new Promise((res, rej) => {
+      const url = URL.createObjectURL(file);
+      const im = new Image();
+      im.onload = () => {
+        URL.revokeObjectURL(url);
+        const s = Math.min(im.naturalWidth, im.naturalHeight);
+        const sx = (im.naturalWidth - s) / 2, sy = (im.naturalHeight - s) / 2;
+        const cv = document.createElement('canvas');
+        cv.width = size; cv.height = size;
+        cv.getContext('2d').drawImage(im, sx, sy, s, s, 0, 0, size, size);
+        res(cv.toDataURL('image/jpeg', 0.85));
+      };
+      im.onerror = (e) => { URL.revokeObjectURL(url); rej(e); };
+      im.src = url;
+    });
+  }
+  const avatarFile = $('pf-avatar-file');
+  $('pf-avatar-upload').onclick = (e) => { e.stopPropagation(); avatarFile.click(); };
+  avatarFile.onchange = async () => {
+    const f = avatarFile.files && avatarFile.files[0];
+    avatarFile.value = '';
+    if (!f) return;
+    if (!f.type.startsWith('image/')) return;
+    if (f.size > 8 * 1024 * 1024) { alert('图片太大了（限 8MB）'); return; }
+    try {
+      applyFace(await fileToAvatar(f));
+      avatarPicker.classList.remove('show');
+    } catch (err) { alert('这张图片读不出来，换一张试试'); }
+  };
+
+  /* ---------- ① 头卡 ---------- */
+  function renderHero(d) {
+    const face = p.face || (d.zones.length ? (ZONE_ICON[d.zones[0].id] || '🙂') : '🙂');
+    $('pf-avatar-face').innerHTML = faceHTML(face);
+    $('pf-name').textContent = p.name || '未命名居民';
+    if (p.age) { $('pf-age').style.display = ''; $('pf-age').textContent = p.age + ' 岁'; }
+    else $('pf-age').style.display = 'none';
+    $('pf-sign').textContent = d.zones.length
+      ? `${d.zones.map(z => z.name).join(' · ')}出没 · 擅长 ${skills.slice(0, 3).join('、') || '…'}`
+      : '完善名片后，系统会按技能把你归到社区里对应的建筑。';
+    $('pf-contact').textContent = '💬 ' + (p.contact || '未留联系方式');
+    $('pf-st-skill').textContent = skills.length;
+    $('pf-st-zone').textContent = d.zones.length;
+    $('pf-st-free').textContent = freeTime.length;
+    $('pf-st-letter').textContent = d.myLetters.length;
+  }
+
+  /* ---------- ③ 技能 ---------- */
+  function renderSkillList() {
+    $('pf-skill-cnt').textContent = skills.length + ' 项';
+    $('pf-skills').innerHTML = skills.length
+      ? skills.map((s, i) => `<span class="pf-skill-tile" title="第 ${i + 1} 项技能"><b>✦</b>${esc(s)}</span>`).join('')
+      : '<span style="color:var(--muted);font-size:12.5px">还没添加技能，在上方名片里添加。</span>';
+  }
+
+  /* ---------- 我的关注 ---------- */
+  function renderFollows() {
+    const ids = getFollows();
+    const box = $('pf-follows');
+    $('pf-follow-cnt').textContent = ids.length ? ids.length + ' 位' : '';
+    if (!ids.length) {
+      box.innerHTML = '<div class="empty" style="padding:22px 0">还没关注任何人。去 '
+        + '<a href="./skills.html" style="color:var(--accent)">技能广场</a> 点开工牌，就能关注感兴趣的伙伴。</div>';
+      return;
+    }
+    const byId = {};
+    getUsers().forEach(u => { byId[u.id] = u; });
+    box.innerHTML = ids.map(id => {
+      const u = byId[id];
+      if (!u) return '';                       // 该成员已不在数据里（比如种子数据换代）
+      const zid = (u.zones || [])[0] || '';
+      const zn = zid ? (ZONE_BY_ID[zid] || {}).name : '';
+      return `<div class="pf-friend" data-zone="${zid}">
+        <span class="fa">${faceHTML(u.face)}</span>
+        <span class="fcol"><span class="fn">${esc(u.name)}</span>
+          <span class="fz">${zn ? esc(zn) : '未分区'}</span></span>
+        <button class="pf-unfollow" data-uid="${esc(u.id)}" type="button">取消关注</button>
+      </div>`;
+    }).join('');
+    // 点行 → 去该成员所在的分区工牌墙；点按钮 → 取消关注
+    box.querySelectorAll('.pf-friend').forEach(el => {
+      el.onclick = (e) => {
+        if (e.target.closest('.pf-unfollow')) return;
+        const zid = el.dataset.zone;
+        location.href = zid ? `./skills.html?zone=${zid}` : './skills.html';
+      };
+    });
+    box.querySelectorAll('.pf-unfollow').forEach(b => {
+      b.onclick = (e) => { e.stopPropagation(); toggleFollow(b.dataset.uid); renderFollows(); };
+    });
+  }
+
+  /* ---------- ⑤ 我的发布 ---------- */
+  function renderPubs(d) {
+    const box = $('pf-pubs');
+    const total = d.myLetters.length + d.myPosts.length;
+    $('pf-pub-cnt').textContent = total ? total + ' 条' : '';
+    let html = '';
+    if (d.myLetters.length) {
+      html += '<div class="pf-pubsub">📮 搭子帖（投递在沙盘中央广场）</div>' + d.myLetters.slice(0, 4).map(l => {
+        const z = ZONE_BY_ID[l.zone];
+        return `<a class="pf-pub" href="./sandbox.html">
+          <div class="pd">${esc(l.content)}</div>
+          <div class="pm">${z ? zoneTag(z) : ''}<span class="tag ${l.type || 'want'}">${l.type === 'offer' ? '我能教' : (l.type === 'team' ? '我要组队' : '我想学')}</span>
+          <span class="tm">${fmtTime(l.created)}</span></div></a>`;
+      }).join('');
+    }
+    if (d.myPosts.length) {
+      html += '<div class="pf-pubsub" style="' + (d.myLetters.length ? '' : 'margin-top:0') + '">📢 技能广场帖子</div>' + d.myPosts.slice(0, 4).map(x => {
+        const z = ZONE_BY_ID[x.zone];
+        return `<a class="pf-pub" href="./skills.html">
+          <div class="pt">${esc(x.title)}</div>
+          ${x.desc ? `<div class="pd">${esc(x.desc)}</div>` : ''}
+          <div class="pm"><span class="tag ${x.type || 'want'}">${x.type === 'offer' ? '能教' : (x.type === 'team' ? '组队' : '想学')}</span>
+          ${z ? zoneTag(z) : ''}<span class="tm">${fmtTime(x.created)}</span></div></a>`;
+      }).join('');
+    }
+    if (!html) {
+      html = '<div class="empty" style="padding:22px 0">还没有发布内容。<br><br>'
+        + '<a class="btn" href="./sandbox.html" style="margin-right:8px">📮 去发搭子帖</a>'
+        + '<a class="btn" href="./skills.html">📢 去发技能帖</a></div>';
+    }
+    box.innerHTML = html;
+  }
+
+  /* ---------- ⑥ 完整度 ---------- */
+  const COMPLETE_ITEMS = [
+    { label:'填写姓名', ok:() => !!p.name, target:'f-name' },
+    { label:'填写年龄', ok:() => !!p.age, target:'f-age' },
+    { label:'填写联系方式', ok:() => !!p.contact, target:'f-contact' },
+    { label:'添加至少 1 项技能', ok:() => skills.length >= 1, target:'f-skill' },
+    { label:'选择空闲时段', ok:() => freeTime.length >= 1, target:'time-chips' },
+  ];
+  function renderComplete() {
+    const done = COMPLETE_ITEMS.filter(it => it.ok()).length;
+    const pct = Math.round(done / COMPLETE_ITEMS.length * 100);
+    $('pf-ring-v').textContent = pct + '%';
+    $('pf-ring').style.background = `conic-gradient(var(--accent) ${pct * 3.6}deg, rgba(255,255,255,.08) 0deg)`;
+    $('pf-checks').innerHTML = COMPLETE_ITEMS.map((it, i) => {
+      const ok = it.ok();
+      return `<div class="pf-check ${ok ? 'ok' : ''}">
+        <span class="box">${ok ? '✓' : ''}</span>${esc(it.label)}
+        ${ok ? '' : `<span class="go" data-go="${i}">去完成</span>`}</div>`;
+    }).join('');
+    $('pf-checks').querySelectorAll('.go').forEach(g => {
+      g.onclick = () => {
+        const t = $(COMPLETE_ITEMS[Number(g.dataset.go)].target);
+        $('pf-edit').scrollIntoView({ behavior:'smooth', block:'center' });
+        setTimeout(() => { if (t && t.focus) t.focus(); }, 450);
+      };
+    });
+  }
+
+  /* ---------- ⑦ 徽章（规则实时计算，不放假徽章） ---------- */
+  // 追踪上次徽章状态：检测"刚点亮"的徽章 → 触发上色弹跳动画
+  const badgePrev = {};
+  function renderBadges(d) {
+    const set = [
+      { ic:'🌱', t:'初来社区', desc:'保存一次名片即点亮', cond:'保存过名片', on:!!p.joinedAt },
+      { ic:'📝', t:'名片完整', desc:'5 项资料全部填齐：姓名/年龄/联系方式/技能/空闲时段', cond:'完整度 100%', on:d_pct100() },
+      { ic:'🎯', t:'技能达人', desc:'在名片里添加至少 3 项技能', cond:`已添 ${skills.length} / 3 项`, on:skills.length >= 3 },
+      { ic:'🏘', t:'多栖居民', desc:'技能覆盖至少 2 个不同分区（如运动+艺术）', cond:`已入 ${d.zones.length} / 2 区`, on:d.zones.length >= 2 },
+      { ic:'📮', t:'第一封信', desc:'在沙盘中央广场投递第一封搭子帖', cond:`已投 ${d.myLetters.length} / 1 封`, on:d.myLetters.length >= 1 },
+      { ic:'📢', t:'社区发声', desc:'在技能广场发布第一条帖子（能教/想学）', cond:`已发 ${d.myPosts.length} / 1 条`, on:d.myPosts.length >= 1 },
+    ];
+    function d_pct100(){ return COMPLETE_ITEMS.every(it => it.ok()); }
+    // 找出刚点亮的徽章（上次未点亮/没记录 + 这次已点亮）
+    const justLit = new Set();
+    set.forEach(b => {
+      const was = badgePrev[b.t];
+      if (b.on && !was) justLit.add(b.t);
+      badgePrev[b.t] = b.on;
+    });
+    $('pf-badges').innerHTML = set.map(b => {
+      const cls = [b.on ? '' : 'off', justLit.has(b.t) ? 'just-lit' : ''].filter(Boolean).join(' ');
+      return `<div class="pf-badge ${cls}">
+        <div class="bm-tip"><b>${esc(b.t)}</b>${b.on ? '✅ 已点亮' : '⏳ 未点亮'}<br>
+          <span class="cond">${b.on ? '已达成：' : '达成条件：'}${esc(b.cond)}</span><br>
+          <span style="color:var(--muted);font-size:11px">${esc(b.desc)}</span></div>
+        <div class="bi">${b.ic}</div><div class="bt">${esc(b.t)}</div></div>`;
+    }).join('');
+    // 动画结束后移除 just-lit class（避免下次重复触发）
+    setTimeout(() => {
+      $('pf-badges').querySelectorAll('.just-lit').forEach(el => el.classList.remove('just-lit'));
+    }, 1500);
+  }
+
+  /* ---------- ⑧ 信息 ---------- */
+  function renderInfo(d) {
+    $('pf-info-zones').innerHTML = d.zones.length
+      ? `<span class="pf-zones">${d.zones.map(zoneTag).join('')}</span>`
+      : '暂未分配';
+    $('pf-info-contact').textContent = p.contact || '未填写';
+    $('pf-info-free').textContent = freeTime.length ? freeTime.join('、') : '未选择';
+    $('pf-info-joined').textContent = p.joinedAt
+      ? new Date(p.joinedAt).toLocaleDateString('zh-CN', { year:'numeric', month:'long', day:'numeric' })
+      : '保存名片后记录';
+  }
+
+  /* ---------- 总渲染 ---------- */
+  function renderAll() {
+    const d = derived();
+    renderHero(d);
+    renderSkillList();
+    renderFollows();
+    renderPubs(d);
+    renderComplete();
+    renderBadges(d);
+    renderInfo(d);
+  }
+
+  /* ---------- 初始化 ---------- */
+  $('f-name').value = p.name || '';
+  $('f-age').value = p.age || '';
+  $('f-contact').value = p.contact || '';
+  renderSkills(); renderTime(); renderAll();
+
+  /* ---------- 保存 / 清空 ---------- */
+  $('save').onclick = () => {
+    p = {
+      name: $('f-name').value.trim(),
+      age: $('f-age').value.trim(),
+      contact: $('f-contact').value.trim(),
+      skills, freeTime,
+      face: p.face || '',                    // 保留已选头像（emoji 或上传照片），否则保存后会变回默认
+      joinedAt: p.joinedAt || Date.now(),   // 首次保存时记下加入时间
+    };
+    saveProfile(p);
+    upsertMe(); // 把本人按技能归入对应建筑
+    const zoneIds = classifySkills(skills);
+    const box = $('zone-assign');
+    if (zoneIds.length) {
+      box.innerHTML = `<div class="assign-card">
+        <div class="at">🏷 你的技能把你分到了 ${zoneIds.length} 栋建筑</div>
+        <div class="az">${zoneIds.map(id => zoneTag(ZONE_BY_ID[id])).join('')}</div>
+        <div class="ah">去 <a href="./sandbox.html" style="color:var(--accent)">沙盘</a> 点开对应建筑，看你和同区伙伴的工牌墙 →</div>
+      </div>`;
+    } else {
+      box.innerHTML = `<div class="assign-card"><div class="at">暂未匹配到分区</div>
+        <div class="ah">技能里加上如「篮球 / 吉他 / 烘焙 / 3D 建模」等关键词，系统才能把你分到对应建筑。</div></div>`;
+    }
+    $('saved').textContent = '✓ 已保存 ' + new Date().toLocaleTimeString();
+    renderAll();
+  };
+  $('reset').onclick = () => {
+    if (!confirm('确定清空本机名片？')) return;
+    skills = []; freeTime = [];
+    $('f-name').value = ''; $('f-age').value = ''; $('f-contact').value = '';
+    renderSkills(); renderTime();
+    p = { name:'', age:'', contact:'', skills:[], freeTime:[] };
+    saveProfile(p);
+    upsertMe();
+    $('zone-assign').innerHTML = '';
+    $('saved').textContent = '已清空';
+    renderAll();
+  };
+</script>
+</body>
+</html>

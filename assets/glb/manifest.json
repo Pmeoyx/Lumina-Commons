@@ -1,0 +1,18 @@
+{
+  "models": [
+    { "file": "chromatic-chaos__Building_Corner_01.glb", "name": "教学楼·角楼" },
+    { "file": "chromatic-chaos__Building_Rect_01.glb",   "name": "教学楼·主楼" },
+    { "file": "chromatic-chaos__Building_Vapor_Ramp_01.glb", "name": "实验楼·坡道" },
+    { "file": "chromatic-chaos__Floor_Vapor_01.glb",     "name": "地面底座" },
+    { "file": "chromatic-chaos__Frame_Neon_Vapor_01.glb", "name": "霓虹灯牌" },
+    { "file": "chromatic-chaos__CellPhone_Retro.glb",    "name": "技能·教手机" },
+    { "file": "chromatic-chaos__Pot_Vapor_01.glb",       "name": "绿植·盆栽" },
+    { "file": "chromatic-chaos__Pot_Retro_03.glb",       "name": "多肉·盆栽" },
+    { "file": "tomb-chaser-2__ElectricPost01_Art.glb",   "name": "路灯" },
+    { "file": "tomb-chaser-2__Grass01_Art.glb",          "name": "植被·草丛" },
+    { "file": "tomb-chaser-2__Column01_Art.glb",         "name": "装饰·立柱" },
+    { "file": "chromatic-chaos__Column_Vapor_01.glb",    "name": "装饰·霓虹柱" },
+    { "file": "tomb-chaser-2__TempleRoof01_Art.glb",     "name": "装饰·屋顶" },
+    { "file": "tomb-chaser-2__Rock01_Art.glb",           "name": "装饰·岩石" }
+  ]
+}

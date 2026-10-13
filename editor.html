@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh" data-page-node-id="N2aqR5gWehX20u9BvhV2W8">
+<head data-page-node-id="98AGTXjCkkFvrneOEPPluV">
+<meta charset="utf-8" data-page-node-id="ErSrtepNCxbjfE2y4zygSh" />
+<meta name="viewport" content="width=device-width, initial-scale=1" data-page-node-id="nEUlxSCajYy2EwM6SX8cwG" />
+<title>校园沙盘 · 拖拽编辑器</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #0c0b16; color: #e8e8f0; overflow: hidden; }
+  #app { display: flex; height: 100vh; }
+  #left, #right { width: 240px; background: rgba(20,18,34,0.95); border-right: 1px solid #2a2740; display: flex; flex-direction: column; }
+  #right { border-right: none; border-left: 1px solid #2a2740; }
+  #viewport { flex: 1; position: relative; }
+  #viewport canvas { display: block; }
+  .panel-title { padding: 14px 16px; font-size: 13px; letter-spacing: 1px; color: #8b7bff; text-transform: uppercase; border-bottom: 1px solid #2a2740; }
+  #library { padding: 10px; overflow-y: auto; flex: 1; }
+  .model-btn { display: block; width: 100%; margin-bottom: 8px; padding: 10px 12px; text-align: left; font-size: 13px; color: #e8e8f0; background: linear-gradient(135deg, #1a1830, #221f3a); border: 1px solid #322d52; border-radius: 8px; cursor: pointer; transition: .15s; }
+  .model-btn:hover { border-color: #8b7bff; background: linear-gradient(135deg, #221f3a, #2c2750); }
+  #tree { padding: 10px; overflow-y: auto; flex: 1; }
+  .tree-item { padding: 8px 10px; font-size: 12px; border-radius: 6px; cursor: pointer; margin-bottom: 4px; background: #16142a; border: 1px solid transparent; }
+  .tree-item:hover { background: #1f1c38; }
+  .tree-item.active { border-color: #8b7bff; background: #281f4d; color: #c9bcff; }
+  #tools { padding: 12px; border-top: 1px solid #2a2740; display: flex; flex-wrap: wrap; gap: 6px; }
+  .tool-btn { flex: 1 1 40%; padding: 8px 0; font-size: 12px; color: #e8e8f0; background: #16142a; border: 1px solid #322d52; border-radius: 6px; cursor: pointer; }
+  .tool-btn:hover { border-color: #8b7bff; }
+  .tool-btn.active { background: #2c2750; border-color: #8b7bff; color: #c9bcff; }
+  .tool-btn.wide { flex-basis: 100%; }
+  #hint { position: absolute; left: 16px; bottom: 16px; font-size: 12px; color: #6b6790; background: rgba(12,11,22,0.7); padding: 8px 12px; border-radius: 8px; pointer-events: none; }
+  #status { position: absolute; right: 16px; top: 16px; font-size: 12px; color: #8b7bff; background: rgba(12,11,22,0.7); padding: 8px 12px; border-radius: 8px; }
+  #overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; color: #6b6790; font-size: 14px; pointer-events: none; }
+  #errbar { position: absolute; top: 0; left: 0; right: 0; background: #c0392b; color: #fff; font-size: 12px; padding: 8px 14px; display: none; z-index: 99; white-space: pre-wrap; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "/three_lib/build/three.module.js",
+    "three/addons/": "/three_lib/jsm/"
+  }
+}
+</script>
+</head>
+<body data-page-node-id="YSq9ab2HgPUlEUezDT5xHP">
+<div id="app" data-page-node-id="UDYjuZbIlsXDbIAo25xNYS">
+  <div id="left" data-page-node-id="FbULXATe1AtqIdXXJxun0X">
+    <div class="panel-title" data-page-node-id="CDJvJY24XLfje6b7bpzNF8">模型库</div>
+    <div id="library" data-page-node-id="VOWzTL1e7EClLNgDAd0K2Q"></div>
+  </div>
+  <div id="viewport" data-page-node-id="YwV1phSOTJn0YUIcvDJAlb">
+    <div id="errbar" data-page-node-id="vntsPkNStqCmORo4L6sEbl"></div>
+    <div id="status" data-page-node-id="4wAanzdTZTRnBcEej88Pbw">初始化…</div>
+    <div id="overlay" data-page-node-id="mo42LXtTdBMYO9VQotOlvB">从左侧「模型库」点一个模型开始搭建<br data-page-node-id="9kvFYRCbgz6OQWCtefGVbH"/>拖拽中键旋转视角 · 右键平移 · 滚轮缩放</div>
+    <div id="hint" data-page-node-id="1H1kxwB2e6fMtiFgRlocND">左键点模型选中 · 拖 Gizmo 移动/旋转/缩放 · 空白处取消选中</div>
+  </div>
+  <div id="right" data-page-node-id="Tl9UX4dhWC6o0CSTeTcA2z">
+    <div class="panel-title" data-page-node-id="Vei41he6kSARHI03ufPB9C">场景树</div>
+    <div id="tree" data-page-node-id="kmEXuJvmHspxE4rwOwCQFJ"></div>
+    <div id="tools" data-page-node-id="gJfTXTtGWpGgz8s1aMFrk4">
+      <button class="tool-btn active" id="btnMove" data-page-node-id="bIFQ5hMuvRMvFhg7JXCBnc">平移</button>
+      <button class="tool-btn" id="btnRotate" data-page-node-id="KHbh6WMkyIgGtgHL9CflhL">旋转</button>
+      <button class="tool-btn" id="btnScale" data-page-node-id="RRpfMUjckpsinQeOu9Mxkx">缩放</button>
+      <button class="tool-btn wide" id="btnDelete" data-page-node-id="8SjroAAOavknIap12PN2Ka">删除选中</button>
+      <button class="tool-btn wide" id="btnSave" data-page-node-id="zvo6F8p30Aa7TK5d5LA8EF">保存场景 JSON</button>
+      <button class="tool-btn wide" id="btnLoad" data-page-node-id="2wp4sKEpBozsmsE0UJ7zrL">加载场景 JSON</button>
+      <input type="file" id="fileInput" accept="application/json" style="display:none" data-page-node-id="CgY3vKZIeaAHmXAfbMzzce" />
+    </div>
+  </div>
+</div>
+
+<script>
+// 全局错误可见化：任何加载/运行错误都显示在顶部红条
+(function () {
+  const bar = document.getElementById('errbar');
+  function show(msg) { bar.style.display = 'block'; bar.textContent = '⚠ 出错: ' + msg; }
+  window.addEventListener('error', (e) => show((e.message || e.error || '未知错误') + (e.filename ? '\n@ ' + e.filename + ':' + e.lineno : '')));
+  window.addEventListener('unhandledrejection', (e) => show('Promise: ' + (e.reason && e.reason.message ? e.reason.message : e.reason)));
+  window.__showErr = show;
+})();
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { TransformControls } from 'three/addons/controls/TransformControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+document.getElementById('status').textContent = 'three r' + THREE.REVISION + ' 已载入';
+
+const container = document.getElementById('viewport');
+const statusEl = document.getElementById('status');
+const setStatus = (t) => { statusEl.textContent = t; };
+const overlay = document.getElementById('overlay');
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0c0b16);
+scene.fog = new THREE.Fog(0x0c0b16, 40, 90);
+
+const camera = new THREE.PerspectiveCamera(55, container.clientWidth / container.clientHeight, 0.1, 1000);
+camera.position.set(20, 18, 24);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(container.clientWidth, container.clientHeight);
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+container.appendChild(renderer.domElement);
+
+const orbit = new OrbitControls(camera, renderer.domElement);
+orbit.target.set(0, 2, 0);
+orbit.enableDamping = true;
+orbit.maxPolarAngle = Math.PI / 2.05;
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dir = new THREE.DirectionalLight(0xffffff, 1.3);
+dir.position.set(20, 35, 12);
+dir.castShadow = true;
+dir.shadow.mapSize.set(2048, 2048);
+dir.shadow.camera.left = -40; dir.shadow.camera.right = 40;
+dir.shadow.camera.top = 40; dir.shadow.camera.bottom = -40;
+scene.add(dir);
+scene.add(new THREE.HemisphereLight(0x88aaff, 0x14121f, 0.5));
+
+const grid = new THREE.GridHelper(80, 40, 0x4a4670, 0x24223a);
+scene.add(grid);
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(80, 80),
+  new THREE.MeshStandardMaterial({ color: 0x0e0d18, roughness: 1, metalness: 0 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -0.02;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// TransformControls 兼容（0.186 需 getHelper() 才加入场景）
+const tcontrol = new TransformControls(camera, renderer.domElement);
+const tHelper = (tcontrol.getHelper && tcontrol.getHelper()) ? tcontrol.getHelper() : tcontrol;
+scene.add(tHelper);
+tcontrol.addEventListener('dragging-changed', (e) => { orbit.enabled = !e.value; });
+tcontrol.setMode('translate');
+
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+const editable = [];
+let selected = null;
+const nameMap = new Map();
+
+const loader = new GLTFLoader();
+
+function normalizeAndAdd(root, transform) {
+  const box = new THREE.Box3().setFromObject(root);
+  const size = box.getSize(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z) || 1;
+  root.scale.setScalar(7 / maxDim);
+  const box2 = new THREE.Box3().setFromObject(root);
+  const center = box2.getCenter(new THREE.Vector3());
+  root.position.sub(center);
+  root.position.y += box2.getSize(new THREE.Vector3()).y / 2;
+  root.traverse((n) => { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; } });
+  if (transform) {
+    root.position.fromArray(transform.position);
+    root.rotation.fromArray(transform.rotation);
+    root.scale.fromArray(transform.scale);
+  }
+  scene.add(root);
+  editable.push(root);
+  overlay.style.display = 'none';
+  select(root);
+  refreshTree();
+}
+
+function addModel(file, transform) {
+  setStatus('加载中: ' + file);
+  loader.load(
+    '/assets/glb/' + file,
+    (gltf) => {
+      const root = gltf.scene;
+      root.userData.modelFile = file;
+      normalizeAndAdd(root, transform);
+      setStatus('已添加: ' + (nameMap.get(file) || file));
+    },
+    undefined,
+    (err) => { console.error(err); setStatus('加载失败: ' + file); window.__showErr && window.__showErr('GLB 加载失败: ' + file); }
+  );
+}
+
+function select(obj) {
+  selected = obj;
+  tcontrol.attach(obj);
+  refreshTree();
+}
+function deselect() {
+  selected = null;
+  tcontrol.detach();
+  refreshTree();
+}
+
+renderer.domElement.addEventListener('click', (e) => {
+  if (tcontrol.axis) return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObjects(editable, true);
+  if (hits.length) {
+    let o = hits[0].object;
+    while (o.parent && !editable.includes(o)) o = o.parent;
+    select(o);
+  } else {
+    deselect();
+  }
+});
+
+function refreshTree() {
+  const tree = document.getElementById('tree');
+  tree.innerHTML = '';
+  editable.forEach((o, i) => {
+    const div = document.createElement('div');
+    div.className = 'tree-item' + (o === selected ? ' active' : '');
+    div.textContent = (i + 1) + '. ' + (nameMap.get(o.userData.modelFile) || o.userData.modelFile);
+    div.onclick = () => select(o);
+    tree.appendChild(div);
+  });
+  if (!editable.length) tree.innerHTML = '<div style="color:#6b6790;font-size:12px;padding:8px">暂无模型，请从左侧添加</div>';
+}
+
+document.getElementById('btnMove').onclick = (e) => { tcontrol.setMode('translate'); setActive(e.target); };
+document.getElementById('btnRotate').onclick = (e) => { tcontrol.setMode('rotate'); setActive(e.target); };
+document.getElementById('btnScale').onclick = (e) => { tcontrol.setMode('scale'); setActive(e.target); };
+function setActive(btn) {
+  document.querySelectorAll('#tools .tool-btn').forEach((b) => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+document.getElementById('btnDelete').onclick = () => {
+  if (!selected) return;
+  scene.remove(selected);
+  tcontrol.detach();
+  const i = editable.indexOf(selected);
+  if (i >= 0) editable.splice(i, 1);
+  selected = null;
+  refreshTree();
+  if (!editable.length) overlay.style.display = 'flex';
+  setStatus('已删除');
+};
+document.getElementById('btnSave').onclick = () => {
+  const data = {
+    version: 1,
+    objects: editable.map((o) => ({
+      model: o.userData.modelFile,
+      position: o.position.toArray(),
+      rotation: o.rotation.toArray(),
+      scale: o.scale.toArray(),
+    })),
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'campus_scene.json';
+  a.click();
+  setStatus('已保存 ' + data.objects.length + ' 个对象');
+};
+const fileInput = document.getElementById('fileInput');
+document.getElementById('btnLoad').onclick = () => fileInput.click();
+fileInput.onchange = (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const data = JSON.parse(r.result);
+      editable.slice().forEach((o) => scene.remove(o));
+      editable.length = 0;
+      deselect();
+      (data.objects || []).forEach((o) => addModel(o.model, o));
+      setStatus('已加载场景');
+      overlay.style.display = 'none';
+    } catch (err) { setStatus('JSON 解析失败'); window.__showErr && window.__showErr('JSON 解析失败'); }
+  };
+  r.readAsText(f);
+};
+
+// 内联清单（兜底，不依赖网络 manifest）
+const FALLBACK = [
+  { file: "chromatic-chaos__Building_Corner_01.glb", name: "教学楼·角楼" },
+  { file: "chromatic-chaos__Building_Rect_01.glb",   name: "教学楼·主楼" },
+  { file: "chromatic-chaos__Building_Vapor_Ramp_01.glb", name: "实验楼·坡道" },
+  { file: "chromatic-chaos__Floor_Vapor_01.glb",     name: "地面底座" },
+  { file: "chromatic-chaos__Frame_Neon_Vapor_01.glb", name: "霓虹灯牌" },
+  { file: "chromatic-chaos__CellPhone_Retro.glb",    name: "技能·教手机" },
+  { file: "chromatic-chaos__Pot_Vapor_01.glb",       name: "绿植·盆栽" },
+  { file: "chromatic-chaos__Pot_Retro_03.glb",       name: "多肉·盆栽" },
+  { file: "tomb-chaser-2__ElectricPost01_Art.glb",   name: "路灯" },
+  { file: "tomb-chaser-2__Grass01_Art.glb",          name: "植被·草丛" },
+  { file: "tomb-chaser-2__Column01_Art.glb",         name: "装饰·立柱" },
+  { file: "tomb-chaser-2__Column_Vapor_01.glb",      name: "装饰·霓虹柱" },
+  { file: "tomb-chaser-2__TempleRoof01_Art.glb",     name: "装饰·屋顶" },
+  { file: "tomb-chaser-2__Rock01_Art.glb",           name: "装饰·岩石" }
+];
+
+function buildLibrary(models) {
+  const lib = document.getElementById('library');
+  lib.innerHTML = '';
+  models.forEach((mod) => {
+    nameMap.set(mod.file, mod.name);
+    const btn = document.createElement('button');
+    btn.className = 'model-btn';
+    btn.textContent = mod.name;
+    btn.onclick = () => addModel(mod.file);
+    lib.appendChild(btn);
+  });
+  setStatus('模型库已加载，共 ' + models.length + ' 个（three r' + THREE.REVISION + '）');
+}
+
+// 优先用 manifest，失败用内联兜底
+fetch('/assets/glb/manifest.json')
+  .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+  .then((m) => buildLibrary(m.models && m.models.length ? m.models : FALLBACK))
+  .catch(() => buildLibrary(FALLBACK));
+
+function onResize() {
+  camera.aspect = container.clientWidth / container.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(container.clientWidth, container.clientHeight);
+}
+window.addEventListener('resize', onResize);
+
+function animate() {
+  requestAnimationFrame(animate);
+  orbit.update();
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>微光社区 · Lumina Commons</title>
+<link rel="stylesheet" href="./css/site.css">
+<link rel="stylesheet" href="./css/intro.css">
+</head>
+<body data-nav="home">
+
+<!-- ============ 首页 · 社区漫游视频（电影卡片：模糊铺底 + 清晰居中卡片） ============ -->
+<!-- 结构：全屏模糊视频铺底（氛围）｜ 居中清晰视频卡片（≈70%，1440p 高清）｜ 顶栏（毛玻璃）｜
+     品牌字（开场淡出）｜ 冰块按钮「进入首页」（约 3s 浮现）｜ 底栏（标语）。
+     主视频默认带声音自动播放；若浏览器拦截自动播放，则静音起播并在首次点击时恢复声音。
+     双击本文件也能看视频；只有进沙盘才需要「启动服务器.bat」。 -->
+<section id="intro">
+
+  <!-- 铺底：同画面模糊放大，只做氛围，始终静音 -->
+  <video id="ivblur" src="./assets/intro/community-tour.mp4" poster="./assets/intro/community-tour-poster.jpg"
+         muted playsinline loop preload="auto" autoplay aria-hidden="true"></video>
+
+  <!-- 清晰卡片：主视频，带声音 -->
+  <video id="ivmain" src="./assets/intro/community-tour.mp4" poster="./assets/intro/community-tour-poster.jpg"
+         playsinline loop preload="auto" autoplay></video>
+
+  <!-- 顶栏：毛玻璃 -->
+  <header class="itop">
+    <div class="itop-brand">
+      <span class="itop-logo">✦</span>
+      <span class="itop-name">微光社区<em>LUMINA COMMONS</em></span>
+    </div>
+    <div class="itop-hello" id="ihello">晚上好</div>
+    <div class="itop-ops">
+      <button id="isound" type="button" title="声音开关" aria-label="声音开关">�</button>
+    </div>
+  </header>
+
+  <!-- 品牌字：开场显示，按钮出现时淡出 -->
+  <div id="ititle"><b>微光社区</b><span>LUMINA COMMONS · 八个分区</span></div>
+
+  <!-- 冰块按钮「进入首页」 -->
+  <button id="ienter" type="button">进入首页</button>
+
+  <!-- 底栏：米黄实底，只留标语 -->
+  <footer class="ibot">
+    <div class="ibot-slogan">在校园里，找到和你一起做事的人<em>微光社区 · 校园技能搭子平台</em></div>
+  </footer>
+
+  <div id="ihint">视频正在播放 · 可随时进入</div>
+</section>
+
+<!-- 普通脚本（不是 module）：file:// 直开也能执行 -->
+<script src="./js/hero.js" defer></script>
+</body>
+</html>

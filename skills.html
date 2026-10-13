@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>技能广场 · 微光社区</title>
+<link rel="stylesheet" href="./css/site.css">
+<style>
+  /* ---------- 模式 C：信封墙（?envelopes=1） ---------- */
+  #envelopemode{max-width:1180px;margin:0 auto;padding:26px 22px 70px}
+  .ew-head{margin-bottom:22px}
+  .ew-title{font-size:24px;font-weight:700;letter-spacing:1px}
+  .ew-sub{color:var(--muted);font-size:13px;margin-top:6px;line-height:1.7}
+  .ew-bar{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center}
+  .ew-input{background:var(--panel-solid);border:1px solid var(--line);color:var(--text);
+    border-radius:10px;padding:10px 13px;font-size:14px;font-family:inherit;outline:none}
+  .ew-input:focus{border-color:var(--accent)}
+  .ew-bar input[type=text]{width:240px}
+  .ew-back{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+  .ew-back a{display:inline-block;font-size:12px;color:var(--accent2);
+    border:1px solid rgba(92,225,230,.35);padding:7px 15px;border-radius:9px;transition:.15s}
+  .ew-back a:hover{background:rgba(92,225,230,.12)}
+
+  .ew-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px}
+  .ew-env{position:relative;aspect-ratio:1.62/1;border-radius:12px;padding:16px 18px;overflow:hidden;
+    background:linear-gradient(160deg,var(--c,#d8a86b),color-mix(in srgb,var(--c,#d8a86b) 70%,#7a4b1e));
+    box-shadow:0 16px 38px rgba(0,0,0,.42);cursor:pointer;transition:.18s;display:flex;flex-direction:column;justify-content:flex-end}
+  .ew-env:hover{transform:translateY(-4px);box-shadow:0 22px 50px rgba(0,0,0,.5),0 0 0 1px var(--c,#fff)}
+  .ew-env .ew-flap{position:absolute;inset:0;clip-path:polygon(0 0,50% 54%,100% 0);
+    background:linear-gradient(180deg,color-mix(in srgb,var(--c,#d8a86b) 120%,#fff 22%),color-mix(in srgb,var(--c,#d8a86b) 80%,#000 14%));opacity:.92}
+  .ew-env .ew-zone{position:relative;font-size:13px;font-weight:700;color:#fff;margin-bottom:4px}
+  .ew-env .ew-hint{position:relative;font-size:11px;color:rgba(255,255,255,.82);margin-bottom:8px}
+  .ew-env .ew-kw{position:relative;display:flex;flex-wrap:wrap;gap:6px}
+  .ew-env .ew-kw .tag{background:rgba(255,255,255,.22);color:#fff;border-color:rgba(255,255,255,.4);margin:0}
+
+  /* 拆信详情弹层 */
+  #ew-detail{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center}
+  #ew-detail .backdrop{position:absolute;inset:0;background:rgba(5,4,12,.74);backdrop-filter:blur(7px)}
+  #ew-detail .ewd-stage{position:relative;width:min(94vw,560px);max-height:92vh;overflow:auto;
+    display:flex;align-items:center;justify-content:center;padding:20px}
+  .ewd-letter{position:relative;width:100%;max-width:540px;background:linear-gradient(180deg,#fbf7ec,#f2ebd7);
+    border-radius:6px;box-shadow:0 34px 90px rgba(0,0,0,.62);padding:36px 44px 30px;color:#3a3428}
+  .ewd-letter::before{content:'';position:absolute;left:42px;top:24px;bottom:24px;width:1px;background:rgba(198,66,58,.22)}
+  .ewd-letter::after{content:'';position:absolute;inset:0;border-radius:6px;pointer-events:none;
+    background:repeating-linear-gradient(180deg,transparent,transparent 31px,rgba(90,120,150,.13) 32px)}
+  .ewd-zone{font-family:var(--font-brush);font-size:17px;letter-spacing:3px;text-align:center;
+    color:#8a6d3b;margin-bottom:16px;font-weight:600;position:relative;z-index:1}
+  .ewd-content{font-family:'KaiTi','STKaiti','FangSong',serif;font-size:20px;line-height:2.05;
+    color:#2b2b33;white-space:pre-wrap;word-break:break-all;position:relative;z-index:1;min-height:80px}
+  .ewd-kw{margin-top:16px;display:flex;flex-wrap:wrap;gap:7px;position:relative;z-index:1}
+  .ewd-meta{margin-top:14px;font-size:13px;color:#6b5a38;position:relative;z-index:1}
+  .ewd-close{display:block;margin:18px auto 0;background:transparent;color:#6b5a38;border:1px solid rgba(120,96,50,.3);
+    border-radius:9px;padding:8px 18px;font-size:13px;cursor:pointer;position:relative;z-index:2}
+</style>
+</head>
+<body data-nav="skills">
+<script>
+/* 防呆守卫：file:// 双击打开时 ES Module 会被浏览器拦截 → 白屏。见 index.html 说明。 */
+if (location.protocol === 'file:') {
+  document.addEventListener('DOMContentLoaded', function () {
+    var d = document.createElement('div');
+    d.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#16121f;color:#fff;display:flex;align-items:center;justify-content:center;padding:40px;font:14px/1.9 system-ui,"Microsoft YaHei",sans-serif;overflow:auto';
+    d.innerHTML = '<div style="max-width:640px">'
+      + '<div style="font-size:36px">⚠️</div>'
+      + '<h2 style="margin:12px 0 16px;font-size:21px">这个页面不能直接双击打开</h2>'
+      + '<p style="color:#b9b4c8">当前地址是 <code style="color:#ff7a5c">file://</code> 协议，浏览器会拦截 ES 模块脚本，所以页面加载不出来——文件本身没坏。</p>'
+      + '<p style="color:#b9b4c8;margin-top:16px"><b style="color:#5ce1e6">正确打开方式：</b>双击项目里的 <b style="color:#fff">启动服务器.bat</b>，再访问 <code style="color:#ff7a5c">http://localhost:8000/index.html</code></p>'
+      + '</div>';
+    document.body.appendChild(d);
+  });
+}
+</script>
+<div class="wrap">
+  <h1 class="page-title" id="ptitle">技能广场</h1>
+  <p class="page-sub" id="psub">把你的「能教」「想学」「组队」亮出来。先去 <a href="./profile.html" style="color:var(--accent)">个人中心</a> 填好技能与空闲时间，系统会自动把你归类到对应的建筑。</p>
+
+  <!-- 全局模式：10 区建筑入口 -->
+  <div id="zdoor-wrap"></div>
+
+  <!-- ===== 模式 B：分区成员工牌墙（?zone=N） ===== -->
+  <div id="zonemode" class="zonewall" style="display:none"></div>
+
+  <!-- ===== 模式 C：信封墙（?envelopes=1，由沙盘 AI 寻友助手跳转而来） ===== -->
+  <div id="envelopemode" style="display:none"></div>
+
+  <!-- 拆信详情弹层（模式 C 用） -->
+  <div id="ew-detail">
+    <div class="backdrop" data-ew-close></div>
+    <div class="ewd-stage">
+      <div class="ewd-letter">
+        <div class="ewd-zone"></div>
+        <div class="ewd-content"></div>
+        <div class="ewd-kw"></div>
+        <div class="ewd-meta"></div>
+        <button class="ewd-close" data-ew-close>← 回到信封墙</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 模式 A：全站技能广场 ===== -->
+  <div id="plazamode">
+  <div class="grid cols-2" style="align-items:start">
+    <!-- 左侧：发布 -->
+    <div>
+      <div class="section-h">发布一条</div>
+      <div class="card">
+        <div class="field">
+          <label>类型</label>
+          <select id="f-type">
+            <option value="offer">我能教（提供技能）</option>
+            <option value="want">我想学（求带）</option>
+            <option value="team">我要组队（找伙伴一起做）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>所属分区</label>
+          <select id="f-zone"></select>
+        </div>
+        <div class="field">
+          <label>标题</label>
+          <input type="text" id="f-title" placeholder="例如：周末篮球半场约局">
+        </div>
+        <div class="field">
+          <label>描述</label>
+          <textarea id="f-desc" placeholder="时间、地点、人数、要求…"></textarea>
+        </div>
+        <div class="field">
+          <label>标签（点击添加，便于匹配）</label>
+          <div class="chips" id="tag-chips"></div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <input type="text" id="f-tag" placeholder="自定义标签后回车">
+            <button class="btn" id="add-tag">加</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>合适时间</label>
+          <div class="timegrid" id="time-chips"></div>
+        </div>
+        <div class="field">
+          <label>你的称呼</label>
+          <input type="text" id="f-author" placeholder="留空则用个人中心姓名">
+        </div>
+        <button class="btn primary" id="publish">发布到广场</button>
+      </div>
+    </div>
+
+    <!-- 右侧：信息流 + AI -->
+    <div>
+      <div class="section-h">AI 为你推荐</div>
+      <div class="card" style="margin-bottom:18px">
+        <button class="btn primary" id="ai-btn">✨ AI 为我推荐</button>
+        <div id="ai-out" style="margin-top:12px"></div>
+        <div class="hint">匹配逻辑：供需互补（你能教对方想学的）+ 技能相关 + 空闲时间重叠，逐项打分并给中文理由。后期可接入真实大模型升级为语义匹配。</div>
+      </div>
+
+      <div class="section-h">广场动态</div>
+      <div class="btn-row" style="margin-bottom:12px">
+        <select id="filter-zone" class="btn" style="padding:7px 12px"></select>
+        <select id="filter-type" class="btn" style="padding:7px 12px">
+          <option value="">全部类型</option>
+          <option value="offer">仅看·能教</option>
+          <option value="want">仅看·想学</option>
+          <option value="team">仅看·组队</option>
+        </select>
+      </div>
+      <div id="feed"></div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<script type="module">
+  import { mountNav } from './js/nav.js';
+  import { ZONES, ZONE_BY_ID } from './js/zones.js';
+  import { getPosts, addPost, removePost, getProfile, getMe, usersInZone, getLetters, isFollowing, toggleFollow, faceHTML } from './js/store.js';
+  import { aiMatchSkills } from './js/ai.js';
+  import { attachTypewriter } from './js/typewriter.js';
+  mountNav('skills');
+
+  const FREE_SLOTS = ['工作日上午','工作日下午','工作日晚间','工作日凌晨','周末上午','周末下午','周末晚间','周末凌晨'];
+  const TAG_POOL = [...new Set(ZONES.flatMap(z => z.skills))];
+  const ZONE_ICON = { 1:'📚', 2:'🎮', 3:'🍜', 4:'🏀', 5:'🛠', 6:'🎸', 7:'🌿', 8:'🐾', 9:'❤️', 10:'🧹' };
+  const $ = id => document.getElementById(id);
+  const esc = s => (s || '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  // 帖子类型中文名（三类：能教 / 想学 / 组队）
+  const typeName = (t, long) => t === 'offer' ? (long ? '我能教' : '能教')
+    : t === 'team' ? (long ? '我要组队' : '组队') : (long ? '我想学' : '想学');
+
+  // ============ 模式分流 ============
+  const params = new URLSearchParams(location.search);
+  const qZone = params.get('zone');
+  const zoneId = (qZone && ZONE_BY_ID[Number(qZone)]) ? Number(qZone) : null;
+  const qEnv = params.get('envelopes');     // 模式 C：信封墙（沙盘 AI 寻友助手跳转）
+  const qKw = params.get('kw') || '';
+
+  if (qEnv) {
+    renderEnvelopeWall(qKw, zoneId);
+  } else if (zoneId) {
+    renderZoneWall(zoneId);
+    // 工牌墙整页滚动吸附（每页最多 5 张工牌）
+    document.documentElement.classList.add('snap-y');
+  } else {
+    renderZoneDoors();
+  }
+
+  // ============ 模式 A：分区建筑入口条 ============
+  function renderZoneDoors() {
+    const wrap = $('zdoor-wrap');
+    wrap.innerHTML = `<div class="section-h">点开一栋建筑，看这区的成员</div>
+      <div class="zdoor">${ZONES.map(z => {
+        const n = usersInZone(z.id).length;
+        return `<a href="./skills.html?zone=${z.id}" style="border-color:${z.theme}55">
+          <div style="font-size:24px">${ZONE_ICON[z.id]}</div>
+          <div class="n" style="color:${z.theme}">${z.name}</div>
+          <div class="c">${n} 位成员 ▸</div></a>`;
+      }).join('')}</div>`;
+  }
+
+  // ============ 模式 B：成员工牌墙（滚动掉落） ============
+  function renderZoneWall(zid) {
+    const z = ZONE_BY_ID[zid];
+    // 切到工牌墙视图
+    $('ptitle').style.display = 'none';
+    $('psub').style.display = 'none';
+    $('zdoor-wrap').style.display = 'none';
+    $('plazamode').style.display = 'none';
+    const box = $('zonemode');
+    box.style.display = 'block';
+
+    const users = usersInZone(zid);
+    const pages = buildPages(users); // 每页最多 5 张工牌（页内 3 + 2 两行）
+
+    box.innerHTML = `
+      <div class="badge-intro">
+        <div class="zw-head">
+          <div style="font-size:44px">${ZONE_ICON[zid]}</div>
+          <div class="zt" style="color:${z.theme}">${z.name}</div>
+          <div class="zd">${z.desc}</div>
+          <div class="zc">
+            <a class="zw-back" href="./sandbox.html">← 回到沙盘</a>
+            <a class="zw-back" href="./skills.html">全站技能广场</a>
+          </div>
+        </div>
+        <div class="zw-tip">共 ${users.length} 位成员 · <b>每页最多 5 张工牌</b>，向下滚动整页翻动 ▾</div>
+      </div>
+      <div id="badges"></div>
+      ${users.length ? '' : `<div class="empty">这个建筑还没人。去 <a href="./profile.html" style="color:var(--accent)">个人中心</a> 填上技能，系统会把你归到这里。</div>`}
+    `;
+
+    const holder = $('badges');
+    pages.forEach(pg => {
+      const pageEl = document.createElement('div');
+      pageEl.className = 'badge-page';
+      // 页内分行：把该页人数摊平成 1~2 行（每行最多 3 张），避免出现"3 + 1"这种空半排
+      splitRows(pg).forEach(row => {
+        const rowEl = document.createElement('div');
+        rowEl.className = 'badge-row';
+        rowEl.dataset.cols = String(row.length);
+        rowEl.innerHTML = row.map(u => badgeHTML(u, z)).join('');
+        pageEl.appendChild(rowEl);
+      });
+      holder.appendChild(pageEl);
+    });
+
+    // 行进入视口时，整排工牌错峰掉落 + 微摆后停住
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (!e.isIntersecting) return;
+        e.target.querySelectorAll('.badge').forEach((b, bi) => {
+          b.style.animationDelay = (bi * 0.13) + 's';
+          b.classList.add('in');
+        });
+        io.unobserve(e.target);
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+
+    box.querySelectorAll('.badge-row').forEach(r => io.observe(r));
+
+    // 点工牌 → 展开名片浮层（联系方式/技能/分区），不再跳转聊天页
+    const byId = {};
+    users.forEach(u => { byId[u.id] = u; });
+    holder.querySelectorAll('.card-work[data-uid]').forEach(c => {
+      const u = byId[c.dataset.uid];
+      if (!u) return;
+      c.onclick = () => showBadgeCard(u);
+    });
+  }
+
+  // 每页固定 5 张工牌，页内 3 + 2 两行（用户要求：第一行 3、第二行 2，以此类推）。
+  // 最后一页放剩余人数（可能不足 5）。
+  function buildPages(users, perPage = 5) {
+    const pages = [];
+    for (let i = 0; i < users.length; i += perPage) {
+      pages.push(users.slice(i, i + perPage));
+    }
+    return pages;
+  }
+
+  // 页内分行：第一行固定 3 张（不足 3 张时全放第一行），其余进第二行。
+  // 5 → 3+2、4 → 3+1、3 → 3、2 → 2、1 → 1
+  function splitRows(page) {
+    if (page.length <= 3) return [page];
+    return [page.slice(0, 3), page.slice(3)];
+  }
+
+  function badgeHTML(u, z) {
+    const sk = (u.skills || []).map(s => `<span class="tag">${esc(s)}</span>`).join('');
+    const ft = (u.freeTime || []).length ? u.freeTime.join('、') : '未填空闲时间';
+    return `<div class="badge" style="--c:${z.theme}">
+      <div class="string"></div>
+      <div class="card-work" data-uid="${esc(u.id)}">
+        <div class="photo">${faceHTML(u.face, ZONE_ICON[z.id] || '🙂')}</div>
+        <div class="nm">${esc(u.name)}${u.isMe ? '<span class="me">本人</span>' : ''}${!u.isMe && isFollowing(u.id) ? '<span class="badge-followed">已关注</span>' : ''}</div>
+        <div class="ag">${u.age ? esc(String(u.age)) + ' 岁' : '年龄未填'}</div>
+        <div class="sk">${sk}</div>
+        <div class="ct">${esc(u.contact || '未留联系方式')}</div>
+        <div class="ft">空闲：${esc(ft)}</div>
+        <div class="bio">${esc(u.bio || '')}</div>
+        ${u.isMe ? '<div class="chat-hint">📋 点开查看我的名片</div>' : '<div class="chat-hint">📋 点开查看名片</div>'}
+      </div>
+    </div>`;
+  }
+
+  // 工牌名片浮层（替代原 chat 聊天页）：点工牌弹出大号名片
+  let badgeModal = null;
+  // 关注状态变化时，实时增删工牌名字旁的「已关注」红框标签
+  function setBadgeFollowTag(uid, on) {
+    const nm = document.querySelector(`.card-work[data-uid="${uid}"] .nm`);
+    if (!nm) return;
+    let tag = nm.querySelector('.badge-followed');
+    if (on && !tag) {
+      tag = document.createElement('span');
+      tag.className = 'badge-followed';
+      tag.textContent = '已关注';
+      nm.appendChild(tag);
+    } else if (!on && tag) {
+      tag.remove();
+    }
+  }
+  function showBadgeCard(u) {
+    const z = (u.zones && u.zones[0]) ? ZONE_BY_ID[u.zones[0]] : null;
+    const theme = z ? z.theme : '#5ce1e6';
+    const sk = (u.skills || []).map(s => `<span class="tag">${esc(s)}</span>`).join('');
+    const ft = (u.freeTime || []).length ? u.freeTime.join('、') : '未填';
+    if (!badgeModal) {
+      badgeModal = document.createElement('div');
+      badgeModal.className = 'badge-modal';
+      document.body.appendChild(badgeModal);
+      badgeModal.onclick = e => { if (e.target === badgeModal) badgeModal.classList.remove('open'); };
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') badgeModal.classList.remove('open'); });
+    }
+    badgeModal.innerHTML = `<div class="badge-modal-card" style="--c:${theme}">
+      <div class="bm-photo">${faceHTML(u.face, z ? (ZONE_ICON[z.id] || '🙂') : '🙂')}</div>
+      <div class="bm-name">${esc(u.name)}${u.isMe ? '<span class="bm-me">本人</span>' : ''}</div>
+      <div class="bm-age">${u.age ? esc(String(u.age)) + ' 岁' : '年龄未填'}</div>
+      <div class="bm-skills">${sk || '<span style="color:var(--muted);font-size:14px">未填技能</span>'}</div>
+      <div class="bm-row"><b>联系方式：</b>${esc(u.contact || '未留')}</div>
+      <div class="bm-row"><b>空闲时段：</b>${esc(ft)}</div>
+      ${z ? `<div class="bm-row"><b>所在分区：</b>${esc(z.name)}</div>` : ''}
+      ${u.bio ? `<div class="bm-bio">${esc(u.bio)}</div>` : ''}
+      <div class="bm-actions">
+        ${u.isMe ? '' : `<button class="bm-follow${isFollowing(u.id) ? ' on' : ''}" type="button">${isFollowing(u.id) ? '✓ 已关注' : '＋ 关注'}</button>`}
+        <button class="bm-close" type="button">关闭</button>
+      </div>
+    </div>`;
+    badgeModal.querySelector('.bm-close').onclick = () => badgeModal.classList.remove('open');
+    const fbtn = badgeModal.querySelector('.bm-follow');
+    if (fbtn) {
+      fbtn.onclick = () => {
+        const nowFollowing = toggleFollow(u.id);
+        fbtn.classList.toggle('on', nowFollowing);
+        fbtn.textContent = nowFollowing ? '✓ 已关注' : '＋ 关注';
+        setBadgeFollowTag(u.id, nowFollowing);   // 同步刷新工牌名字旁的红框标签
+      };
+    }
+    badgeModal.classList.add('open');
+  }
+
+  // ============ 模式 C：信封墙（?envelopes=1） ============
+  // 由沙盘左下角 AI 寻友助手跳转而来，按 kw / zone 预筛选，可继续手动筛选，点信封拆开看详情。
+  function renderEnvelopeWall(kw0, zone0) {
+    $('ptitle').style.display = 'none';
+    $('psub').style.display = 'none';
+    $('zdoor-wrap').style.display = 'none';
+    $('plazamode').style.display = 'none';
+    const box = $('envelopemode');
+    box.style.display = 'block';
+
+    box.innerHTML = `
+      <div class="ew-head">
+        <div class="ew-title">📮 搭子帖信封墙</div>
+        <div class="ew-sub">广场里所有搭子寻觅帖都封在这里。点信封拆开看详情，或按关键词 / 分区筛选。</div>
+        <div class="ew-bar">
+          <input type="text" id="ew-kw" class="ew-input" placeholder="关键词，如：排球 / 吉他" value="${esc(kw0)}">
+          <select id="ew-zone" class="ew-input">
+            <option value="">全部分区</option>
+            ${ZONES.map(z => `<option value="${z.id}" ${zone0 === z.id ? 'selected' : ''}>${z.name}</option>`).join('')}
+          </select>
+          <button class="btn" id="ew-reset">重置</button>
+        </div>
+        <div class="ew-back">
+          <a class="zw-back" href="./sandbox.html">← 回到沙盘</a>
+          <a class="zw-back" href="./skills.html">全站技能广场</a>
+        </div>
+      </div>
+      <div id="ew-grid" class="ew-grid"></div>
+    `;
+
+    const grid = $('ew-grid');
+    function paint() {
+      const kw = $('ew-kw').value.trim().toLowerCase();
+      const z = $('ew-zone').value ? Number($('ew-zone').value) : null;
+      let list = getLetters();
+      if (z) list = list.filter(l => l.zone === z);
+      if (kw) list = list.filter(l => {
+        const hay = ((l.keywords || []).join(' ') + ' ' + (l.content || '')).toLowerCase();
+        return hay.includes(kw);
+      });
+      if (!list.length) {
+        grid.innerHTML = '<div class="empty">没有匹配的信封。换个关键词，或回沙盘让 AI 帮你找。</div>';
+        return;
+      }
+      grid.innerHTML = list.map((l) => {
+        const zz = ZONE_BY_ID[l.zone]; const c = zz ? zz.theme : '#d8a86b';
+        const kws = (l.keywords || []).map(k => `<span class="tag">${esc(k)}</span>`).join('');
+        return `<div class="ew-env" data-id="${esc(l.id)}" style="--c:${c}">
+          <div class="ew-flap"></div>
+          <div class="ew-zone">${esc(zz ? zz.name : '搭子帖')} · ${typeName(l.type, true)}</div>
+          <div class="ew-hint">点开拆信</div>
+          <div class="ew-kw">${kws}</div>
+        </div>`;
+      }).join('');
+      grid.querySelectorAll('.ew-env').forEach(el => {
+        el.onclick = () => openEnvDetail(list.find(x => x.id === el.dataset.id));
+      });
+    }
+    $('ew-reset').onclick = () => { $('ew-kw').value = ''; $('ew-zone').value = ''; paint(); };
+    $('ew-kw').addEventListener('input', paint);
+    $('ew-zone').addEventListener('change', paint);
+    paint();
+
+    // 拆信：把信封内容展开成信纸
+    function openEnvDetail(l) {
+      if (!l) return;
+      const zz = ZONE_BY_ID[l.zone]; const c = zz ? zz.theme : '#d8a86b';
+      const ov = $('ew-detail');
+      ov.querySelector('.ewd-zone').textContent = (zz ? zz.name : '') + ' · ' + typeName(l.type, true);
+      ov.querySelector('.ewd-zone').style.color = c;
+      ov.querySelector('.ewd-content').textContent = l.content;
+      ov.querySelector('.ewd-kw').innerHTML = (l.keywords || []).map(k => `<span class="tag">${esc(k)}</span>`).join('');
+      ov.querySelector('.ewd-meta').textContent = `🕐 ${l.time || '时间待定'}　·　✉ ${l.contact || '未留联系方式'}`;
+      ov.style.display = 'flex';
+    }
+    $('ew-detail').querySelectorAll('[data-ew-close]').forEach(el => {
+      el.onclick = () => { $('ew-detail').style.display = 'none'; };
+    });
+  }
+
+  // ============ 以下为全站技能广场逻辑（模式 A 才用） ============
+  const zoneSel = $('f-zone'); const fz = $('filter-zone');
+  zoneSel.innerHTML = ZONES.map(z => `<option value="${z.id}">${z.name}</option>`).join('');
+  fz.innerHTML = '<option value="">全部分区</option>' + ZONES.map(z => `<option value="${z.id}">${z.name}</option>`).join('');
+
+  let tags = [];
+  function renderTags() {
+    const box = $('tag-chips'); box.innerHTML = '';
+    TAG_POOL.forEach(t => {
+      const on = tags.includes(t);
+      const c = document.createElement('span'); c.className = 'chip' + (on ? ' on' : '');
+      c.textContent = t;
+      c.onclick = () => { tags = on ? tags.filter(x => x !== t) : [...tags, t]; renderTags(); };
+      box.appendChild(c);
+    });
+    tags.filter(t => !TAG_POOL.includes(t)).forEach(t => {
+      const c = document.createElement('span'); c.className = 'chip on';
+      c.textContent = t + ' ✕';
+      c.onclick = () => { tags = tags.filter(x => x !== t); renderTags(); };
+      box.appendChild(c);
+    });
+  }
+  function addTag() { const v = $('f-tag').value.trim(); if (v && !tags.includes(v)) { tags.push(v); renderTags(); } $('f-tag').value=''; }
+  $('add-tag').onclick = addTag;
+  $('f-tag').addEventListener('keydown', e => { if (e.key === 'Enter') addTag(); });
+  renderTags();
+
+  let time = [];
+  function renderTime() {
+    const box = $('time-chips'); box.innerHTML = '';
+    FREE_SLOTS.forEach(s => {
+      const c = document.createElement('span'); c.className = 'chip' + (time.includes(s) ? ' on' : '');
+      c.textContent = s;
+      c.onclick = () => { time = time.includes(s) ? time.filter(x => x !== s) : [...time, s]; renderTime(); };
+      box.appendChild(c);
+    });
+  }
+  renderTime();
+
+  // 点击输入框 → 下方升起沉浸式复古打字机（按键下沉 / 字模臂敲击 / 拼音候选）
+  attachTypewriter($('f-title'),  { label: '标题', singleLine: true });
+  attachTypewriter($('f-desc'),   { label: '描述', multiline: true });
+  attachTypewriter($('f-tag'),    { label: '自定义标签', singleLine: true, onEnter: () => addTag() });
+  attachTypewriter($('f-author'), { label: '你的称呼', singleLine: true });
+
+  $('publish').onclick = () => {
+    const title = $('f-title').value.trim();
+    if (!title) { alert('请填写标题'); return; }
+    const prof = getProfile();
+    addPost({
+      type: $('f-type').value,
+      zone: parseInt($('f-zone').value, 10),
+      title,
+      desc: $('f-desc').value.trim(),
+      tags,
+      time,
+      author: ($('f-author').value.trim()) || prof.name || '匿名居民',
+    });
+    $('f-title').value = ''; $('f-desc').value = ''; $('f-author').value = '';
+    tags = []; time = []; renderTags(); renderTime();
+    renderFeed();
+  };
+
+  function renderFeed() {
+    if (zoneId) return; // 模式 B 不渲染
+    const posts = getPosts();
+    const zf = $('filter-zone').value, tf = $('filter-type').value;
+    const list = posts.filter(p => (!zf || p.zone == zf) && (!tf || p.type === tf));
+    const feed = $('feed');
+    if (!list.length) { feed.innerHTML = '<div class="empty">还没有帖子，发一条试试？</div>'; return; }
+    feed.innerHTML = list.map(p => {
+      const z = ZONES.find(x => x.id === p.zone);
+      const color = z ? z.theme : '#888';
+      return `<div class="post">
+        <div class="head">
+          <span class="dot" style="background:${color};box-shadow:0 0 8px ${color}"></span>
+          <span class="title">${esc(p.title)}</span>
+          <span class="tag ${p.type}">${typeName(p.type)}</span>
+          <span class="author">${esc(p.author)}</span>
+        </div>
+        <div class="desc">${esc(p.desc || '（无描述）')}</div>
+        <div class="foot">
+          <span class="tag">${z ? z.name : '分区'}</span>
+          ${(p.tags || []).map(t => `<span class="tag">${esc(t)}</span>`).join('')}
+          ${(p.time || []).map(t => `<span class="tag">${esc(t)}</span>`).join('')}
+          <span style="margin-left:auto;cursor:pointer;color:var(--muted);font-size:12px" data-del="${p.id}">删除</span>
+        </div>
+      </div>`;
+    }).join('');
+    feed.querySelectorAll('[data-del]').forEach(el => el.onclick = () => { removePost(el.dataset.del); renderFeed(); });
+  }
+
+  if (!zoneId) {
+    $('filter-zone').onchange = renderFeed;
+    $('filter-type').onchange = renderFeed;
+    renderFeed();
+  }
+
+  $('ai-btn').onclick = async () => {
+    const out = $('ai-out');
+    out.innerHTML = '<div class="hint">AI 正在为你匹配…</div>';
+    const me = getMe();
+    const res = await aiMatchSkills(getPosts());
+    if (!res.length) { out.innerHTML = '<div class="empty">暂无可推荐的帖子。去发一条，或先到个人中心补全技能。</div>'; return; }
+    if (!(me.skills && me.skills.length)) out.innerHTML = '<div class="hint">⚠ 你还没填技能，以下按内容弱相关推荐；去个人中心补全后更准。</div>';
+    out.innerHTML = res.map(m => {
+      const z = ZONES.find(x => x.id === m.post.zone);
+      return `<div class="match">
+        <div class="score">${m.score}</div>
+        <div style="flex:1">
+          <div style="font-weight:600">${esc(m.post.title)} <span class="tag ${m.post.type}">${typeName(m.post.type)}</span> <span class="tag">${z?z.name:''}</span></div>
+          <div class="why">${m.reasons.map(r => '· ' + esc(r)).join('<br>')}</div>
+        </div>
+      </div>`;
+    }).join('');
+  };
+</script>
+</body>
+</html>

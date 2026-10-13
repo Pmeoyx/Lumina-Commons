@@ -1,0 +1,1737 @@
+<!DOCTYPE html>
+<html lang="zh" data-page-node-id="w4KbtkafcFAjF5ImnP9PFe">
+<head data-page-node-id="wsm80loACdQPGqrwqkGz3v">
+<meta charset="UTF-8" data-page-node-id="FHTW7hk14umHVo2g6gMiVg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="nGnDgaUZr7Ku4bZvUzrIE2">
+<title>3D 沙盘 · 微光社区</title>
+<link rel="stylesheet" href="./css/site.css" data-page-node-id="NRFYWXkJD5ZDHFdxp9JqKD">
+<style>
+  #app{display:flex;height:calc(100vh - var(--nav-h))}   /* 顶部有 56px sticky 导航，扣掉后舞台正好一屏 */
+  #stage{flex:1;position:relative;min-height:0;overflow:hidden;background:radial-gradient(120% 120% at 70% 15%,#1a1530 0%,#0b0a13 60%)}
+  #c{width:100%;height:100%;display:block}
+  #toolbar{position:absolute;left:18px;top:18px;display:flex;flex-direction:column;gap:10px}
+  .grp{display:flex;gap:6px;background:var(--panel);backdrop-filter:blur(12px) saturate(1.3);-webkit-backdrop-filter:blur(12px) saturate(1.3);border:1px solid var(--line);border-radius:12px;padding:6px}
+  .grp .lab{font-size:10px;color:var(--muted);align-self:center;padding:0 6px 0 4px}
+  .btn{background:transparent;border:1px solid rgba(255,255,255,.12);color:var(--text);padding:6px 11px;border-radius:8px;font-size:12px;cursor:pointer;transition:.15s}
+  .btn:hover{border-color:var(--accent)}
+  .btn.on{background:linear-gradient(90deg,rgba(255,122,92,.28),rgba(92,225,230,.12));border-color:var(--accent);color:#fff}
+  #hud{position:absolute;right:18px;bottom:18px;background:var(--panel);backdrop-filter:blur(12px) saturate(1.2);-webkit-backdrop-filter:blur(12px) saturate(1.2);border:1px solid var(--line);border-radius:12px;padding:14px 18px;min-width:230px}
+  #clock{font-size:26px;font-weight:600;letter-spacing:2px;color:#fff;font-variant-numeric:tabular-nums}
+  #clockstate{font-size:11px;color:var(--accent2);margin-top:2px}
+  #selinfo{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6;border-top:1px solid var(--line);padding-top:9px}
+  #selinfo b{color:#fff}
+  .sec{font-size:11px;color:var(--accent2);letter-spacing:1px;padding:14px 20px 6px;text-transform:uppercase}
+  .zone{display:flex;align-items:center;gap:10px;padding:9px 12px;margin:0 12px 5px;border-radius:10px;cursor:pointer;transition:.15s;border:1px solid transparent}
+  .zone:hover{background:rgba(255,255,255,.05)}
+  .zone.active{background:linear-gradient(90deg,rgba(255,122,92,.18),rgba(92,225,230,.08));border-color:rgba(255,122,92,.4)}
+  .zone .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+  .zone .nm{font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .zone .cnt{font-size:11px;font-weight:700;color:#cfcfe0;background:rgba(255,255,255,.09);
+    border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:1px 8px;flex-shrink:0;
+    transition:.25s;font-variant-numeric:tabular-nums}
+  .zone .cnt.bump{background:rgba(92,225,230,.22);border-color:rgba(92,225,230,.6);color:#eaffff}
+
+  /* 侧栏社区数据 */
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 20px 8px}
+  .stats .st{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.1);
+    border-radius:11px;padding:9px 10px;text-align:center}
+  .stats .st b{display:block;font-size:21px;font-weight:800;color:#fff;line-height:1.15;
+    font-variant-numeric:tabular-nums;transition:.25s}
+  .stats .st b.bump{color:#5ce1e6;transform:scale(1.14)}
+  .stats .st span{font-size:10px;color:var(--muted);letter-spacing:.4px}
+  .stats .st .live{display:inline-block;width:5px;height:5px;border-radius:50%;background:#5ce1e6;
+    margin-right:4px;vertical-align:middle;animation:livePulse 2s infinite}
+  @keyframes livePulse{0%,100%{opacity:1}50%{opacity:.25}}
+  #zoneinfo{padding:0 20px 10px;font-size:13px;color:#c8c8d8;line-height:1.8}
+  #zoneinfo .zt{font-size:15px;font-weight:600;color:#fff;margin-bottom:6px}
+  #zoneinfo .zskills{margin:8px 0}
+  .label3d{background:rgba(255,255,255,.08);backdrop-filter:blur(6px);border:1px solid rgba(92,225,230,.55);color:#eaffff;padding:4px 11px;border-radius:11px;font-size:12px;text-align:center;white-space:nowrap;box-shadow:0 0 14px rgba(92,225,230,.35);transform:translate(-50%,-50%);cursor:pointer;pointer-events:auto}
+  .label3d b{display:block;font-size:13px;color:#fff}
+  #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted)}
+
+  /* 点建筑 → 镜头推进 → 主题色遮罩淡入 → 切页（避免生硬的瞬间跳转） */
+  #drillveil{position:absolute;inset:0;z-index:60;opacity:0;pointer-events:none;
+    display:flex;align-items:center;justify-content:center;transition:none}
+  #drillveil .dv-in{text-align:center;transform:translateY(8px);opacity:0}
+  #drillveil .dv-ico{font-size:46px;line-height:1}
+  #drillveil .dv-nm{font-size:22px;font-weight:800;letter-spacing:2px;margin-top:10px;color:#fff}
+  #drillveil .dv-go{font-size:12px;letter-spacing:3px;color:rgba(255,255,255,.62);margin-top:8px}
+
+  /* ===== 信封 / 信纸主题文字统一用书法体（米芾行书，见 css/site.css 的 --font-brush） ===== */
+  .letter-head,.letter-typewriter,.letter .frow label,
+  .stamp-inner b,.stamp-inner span,
+  .envelope2 .env-zone,.envelope2 .env-hint,
+  .lv-type,.lv-content,
+  .env-label,.env-label b,.env-label span,
+  .plaza-label,.plaza-label b,.plaza-label span,
+  #bh-title,#bh-hint,#bh-sub{font-family:var(--font-brush)}
+  /* 信纸正文用行书要稍放大、行距放松，否则笔画挤在一起不好读 */
+  .lv-content{font-size:21px;line-height:2.05}
+  .letter-head{font-size:17px;letter-spacing:4px}
+  .letter-typewriter{font-size:22px}
+
+  /* ===== 技能搭子信封系统 ===== */
+  #btn-compose{margin:0 20px 10px;width:calc(100% - 40px)}
+  .plaza-label{background:rgba(255,209,102,.07);border:1px solid rgba(255,209,102,.5);color:#ffd166;
+    border-radius:12px;padding:6px 13px;font-size:12px;text-align:center;white-space:nowrap;
+    box-shadow:0 0 9px rgba(255,209,102,.14);cursor:pointer;pointer-events:auto;backdrop-filter:blur(6px)}
+  .plaza-label b{display:block;font-size:13px}
+  .plaza-label span{font-size:10px;color:#e9c56a;opacity:.8}
+  .stack-label{background:rgba(20,18,30,.88);border:1px solid rgba(255,255,255,.16);border-radius:12px;
+    padding:5px 12px;font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;pointer-events:auto;
+    box-shadow:0 8px 22px rgba(0,0,0,.45)}
+  .env-label{background:rgba(20,18,30,.86);border:1px solid rgba(255,255,255,.18);border-radius:10px;
+    padding:4px 10px;font-size:11px;text-align:center;white-space:nowrap;color:#fff;pointer-events:auto;
+    box-shadow:0 6px 18px rgba(0,0,0,.4)}
+  .env-label b{display:block;font-size:12px}
+  .env-label span{color:#cfcfe0;font-size:10px}
+
+  /* 浏览 HUD */
+  #browse-hud{position:absolute;left:50%;top:18px;transform:translateX(-50%);z-index:20;
+    background:var(--panel);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:14px;
+    padding:12px 20px;text-align:center;min-width:340px}
+  #bh-title{font-size:15px;font-weight:700}
+  #bh-hint{font-size:11px;color:var(--muted);margin-top:4px}
+  #bh-sub{font-size:12px;color:var(--accent2);margin-top:5px}
+  #btn-exit-browse{position:absolute;left:18px;bottom:18px;z-index:21}
+
+  /* 覆盖层（发布 / 详情） */
+  .overlay{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center}
+  .overlay .backdrop{position:absolute;inset:0;background:rgba(5,4,12,.74);backdrop-filter:blur(7px)}
+  .overlay-stage{position:relative;width:min(94vw,660px);max-height:92vh;overflow:auto;display:flex;align-items:center;justify-content:center;padding:20px}
+
+  /* 信纸 */
+  .letter{position:relative;width:100%;max-width:560px;background:linear-gradient(180deg,#fbf7ec,#f2ebd7);
+    border-radius:6px;box-shadow:0 34px 90px rgba(0,0,0,.62);padding:38px 48px 30px;color:#3a3428;
+    transition:transform .8s cubic-bezier(.45,0,.2,1),opacity .6s;transform-origin:50% 20%}
+  .letter::before{content:'';position:absolute;left:46px;top:26px;bottom:26px;width:1px;background:rgba(198,66,58,.22)}
+  .letter::after{content:'';position:absolute;inset:0;border-radius:6px;pointer-events:none;
+    background:repeating-linear-gradient(180deg,transparent,transparent 31px,rgba(90,120,150,.13) 32px)}
+  .letter.folded{transform:rotateX(-88deg) scale(.7) translateY(40px);opacity:0}
+  .letter-head{font-size:15px;letter-spacing:3px;color:#8a6d3b;text-align:center;margin-bottom:18px;font-weight:600;position:relative;z-index:1}
+  .letter .frow{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:13px;position:relative;z-index:1}
+  .letter .frow label{font-size:12px;color:#9a824f;flex:0 0 auto;align-self:center}
+  .letter select,.letter input,.letter textarea{background:rgba(255,255,255,.55);border:1px solid rgba(120,96,50,.25);
+    color:#3a3428;border-radius:7px;padding:8px 11px;font-size:14px;font-family:inherit;outline:none;flex:1;min-width:0}
+  .letter textarea{width:100%;min-height:130px;resize:vertical;line-height:1.9}
+  .letter select:focus,.letter input:focus,.letter textarea:focus{border-color:#c66b3a}
+  .letter .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px;position:relative;z-index:1}
+  .quick-slot{display:inline-block;font-size:11px;border:1px solid rgba(120,96,50,.3);border-radius:20px;
+    padding:3px 10px;color:#7a6336;cursor:pointer;transition:.15s;background:rgba(255,255,255,.4)}
+  .quick-slot:hover{border-color:#c66b3a;color:#8a4a2a}
+
+  /* 打字机文本 */
+  .letter-typewriter{font-family:'KaiTi','STKaiti','Kaiti SC','FangSong','SimSun',serif;font-size:20px;
+    line-height:2.05;min-height:170px;color:#2b2b33;white-space:pre-wrap;word-break:break-all;position:relative;z-index:1}
+  .tw-caret{display:inline-block;color:#c0392b;animation:twblink .7s steps(1) infinite}
+  @keyframes twblink{50%{opacity:0}}
+
+  /* 印章 */
+  .stamp{position:absolute;right:56px;bottom:96px;width:112px;height:112px;border-radius:50%;
+    border:3px solid rgba(178,34,34,.85);color:rgba(178,34,34,.92);display:flex;align-items:center;justify-content:center;
+    text-align:center;font-weight:700;opacity:0;pointer-events:none;z-index:2;
+    box-shadow:inset 0 0 0 2px rgba(178,34,34,.28);transform:scale(2.4) rotate(-14deg)}
+  .stamp.stamped{animation:stampIn .52s cubic-bezier(.2,1.5,.4,1) forwards}
+  @keyframes stampIn{0%{transform:scale(2.4) rotate(-14deg);opacity:0}55%{transform:scale(.9) rotate(-14deg);opacity:.92}
+    75%{transform:scale(1.07) rotate(-14deg)}100%{transform:scale(1) rotate(-14deg);opacity:.86}}
+  .stamp-inner b{display:block;font-size:15px;letter-spacing:1px}
+  .stamp-inner span{display:block;font-size:11px;margin-top:5px;word-break:break-all;padding:0 10px;line-height:1.5}
+
+  /* 信封（2D 封缄步） */
+  .envelope2{position:relative;width:min(78vw,460px);aspect-ratio:1.62/1;border-radius:10px;
+    background:linear-gradient(160deg,#dcb074,#c6924f);box-shadow:0 28px 70px rgba(0,0,0,.58);padding:26px 30px;
+    color:#fff;display:flex;flex-direction:column;justify-content:flex-end}
+  .envelope2 .env-flap{position:absolute;inset:0;border-radius:10px;clip-path:polygon(0 0,50% 54%,100% 0);
+    background:linear-gradient(180deg,#ecc68c,#d2a15e)}
+  .envelope2 .env-zone{position:relative;font-size:13px;font-weight:700;margin-bottom:4px}
+  .envelope2 .env-hint{position:relative;font-size:11px;opacity:.8;margin-bottom:10px}
+  .envelope2 .env-keywords{position:relative;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .kchip{display:inline-flex;align-items:center;gap:5px;background:#fff;color:#5b4320;border-radius:20px;
+    padding:4px 11px;font-size:13px;border:1px solid #e6d3a8}
+  .kchip i{font-style:normal;cursor:pointer;opacity:.5}
+  .kchip i:hover{opacity:1}
+  .env-keywords input{background:transparent;border:none;border-bottom:1px dashed rgba(255,255,255,.7);color:#fff;
+    outline:none;font-size:13px;width:96px;padding:3px 2px}
+  .env-keywords input::placeholder{color:rgba(255,255,255,.65)}
+  .env2-actions{display:flex;justify-content:space-between;gap:10px;margin-top:22px;position:relative}
+
+  /* 详情弹层（打开信封） */
+  .letter-view{max-width:520px}
+  .lv-type{font-size:14px;font-weight:700;margin:4px 0 14px;text-align:center}
+  .lv-content{font-family:'KaiTi','STKaiti','FangSong',serif;font-size:19px;line-height:2;color:#2b2b33;
+    white-space:pre-wrap;word-break:break-all;position:relative;z-index:1}
+  .lv-keywords{margin-top:18px;display:flex;flex-wrap:wrap;gap:7px;position:relative;z-index:1}
+  .lv-meta{margin-top:14px;font-size:13px;color:#6b5a38;position:relative;z-index:1}
+  .lv-stamp{position:absolute;right:46px;bottom:84px;width:104px;height:104px;border-radius:50%;
+    border:3px solid rgba(178,34,34,.85);color:rgba(178,34,34,.9);display:flex;align-items:center;justify-content:center;
+    text-align:center;font-weight:700;transform:rotate(-14deg);box-shadow:inset 0 0 0 2px rgba(178,34,34,.25);z-index:2}
+  .lv-close{display:block;margin:20px auto 0;position:relative;z-index:3}
+
+  /* 详情页左右翻页箭头 */
+  .lv-nav{position:absolute;top:50%;transform:translateY(-50%);z-index:4;width:56px;height:88px;padding:0;
+    display:flex;align-items:center;justify-content:center;font-size:36px;line-height:1;font-family:inherit;
+    color:#f4e8d2;cursor:pointer;border-radius:16px;transition:.16s;
+    background:rgba(20,18,30,.55);border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(6px)}
+  .lv-nav:hover:not(:disabled){background:rgba(255,209,102,.24);border-color:rgba(255,209,102,.65);color:#fff;
+    transform:translateY(-50%) scale(1.06)}
+  .lv-nav:disabled{opacity:.28;cursor:not-allowed}
+  .lv-prev{left:26px}.lv-next{right:26px}
+  @media(max-width:760px){.lv-nav{width:42px;height:66px;font-size:26px}.lv-prev{left:6px}.lv-next{right:6px}}
+  .lv-count{text-align:center;font-size:12px;letter-spacing:1px;color:#9a824f;margin:-6px 0 14px;position:relative;z-index:1}
+  .letter-view.slide-l{animation:lvSlideL .34s cubic-bezier(.3,.9,.3,1)}
+  .letter-view.slide-r{animation:lvSlideR .34s cubic-bezier(.3,.9,.3,1)}
+  @keyframes lvSlideL{from{opacity:.3;transform:translateX(34px)}to{opacity:1;transform:none}}
+  @keyframes lvSlideR{from{opacity:.3;transform:translateX(-34px)}to{opacity:1;transform:none}}
+
+  /* 正午明亮态：把浮在亮色天空上的工具条文字转深色，保证可读。
+     导航栏不参与明亮态：各时段底色均为深色，链接保持纯白。 */
+  body.bright #toolbar .grp{background:rgba(255,250,225,.62)}
+  body.bright #toolbar .btn{color:#2b2a18;border-color:rgba(60,56,30,.35)}
+  body.bright #toolbar .lab{color:#6a6440}
+  body.bright #toolbar .btn.on{color:#fff;background:linear-gradient(90deg,rgba(210,120,40,.55),rgba(40,150,150,.4));border-color:rgba(160,90,20,.55)}
+  body.bright #hud{background:rgba(255,250,225,.68);border-color:rgba(60,56,30,.22)}
+  body.bright #hud #clock{color:#2b2a18}
+  body.bright #hud #clockstate{color:#7a6a34}
+  body.bright #hud #selinfo{color:#5a5638;border-top-color:rgba(60,56,30,.22)}
+
+  /* ===== 页面左下角 · AI 寻友助手（常驻可见，进沙盘一眼就能看到提问框） ===== */
+  #sidebar{padding-bottom:190px;overflow-y:auto}   /* 给左下角浮窗留位，避免长期盖住侧栏底部内容；内容过长时侧栏内部滚动，不把舞台撑出视口 */
+  #ai-friend{position:fixed;left:18px;bottom:18px;z-index:40}
+  #ai-friend-toggle{width:50px;height:50px;border-radius:50%;font-size:23px;line-height:1;
+    background:var(--panel);backdrop-filter:blur(12px) saturate(1.3);-webkit-backdrop-filter:blur(12px) saturate(1.3);
+    border:1px solid var(--line);box-shadow:0 8px 24px rgba(0,0,0,.42);padding:0;cursor:pointer;transition:.15s}
+  #ai-friend-toggle:hover{border-color:var(--accent);transform:translateY(-2px)}
+  #ai-friend.thinking #ai-friend-toggle{opacity:.55}
+  #ai-friend-panel{display:none;position:absolute;left:0;bottom:0;width:346px;max-width:calc(100vw - 36px);
+    background:rgba(18,16,28,.76);backdrop-filter:blur(18px) saturate(1.35);-webkit-backdrop-filter:blur(18px) saturate(1.35);
+    border:1px solid var(--line);border-radius:15px;padding:15px;box-shadow:0 18px 46px rgba(0,0,0,.6)}
+  #ai-friend-panel.show{display:block;animation:afpop .22s ease}
+  @keyframes afpop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .af-head{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:#fff;margin-bottom:6px}
+  .af-head #af-close{background:transparent;border:none;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;padding:0 2px}
+  .af-head #af-close:hover{color:#fff}
+  .af-head #af-gear{margin-left:auto;background:transparent;border:none;color:var(--muted);font-size:14px;line-height:1;cursor:pointer;padding:0 2px}
+  .af-head #af-gear:hover{color:#fff}
+  /* AI 接入状态徽标 */
+  .ai-status{font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;letter-spacing:.3px;white-space:nowrap}
+  .ai-status.on{color:#7dd97d;background:rgba(76,175,80,.16);border:1px solid rgba(76,175,80,.4)}
+  .ai-status.off{color:var(--muted);background:rgba(255,255,255,.06);border:1px solid var(--line)}
+  /* AI 设置面板 */
+  .af-setup{display:none;margin-top:11px;padding:11px;border:1px dashed var(--line);border-radius:11px;background:rgba(20,18,30,.5)}
+  .af-setup.show{display:block}
+  .af-setup-t{font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.5}
+  .af-setup input{width:100%;box-sizing:border-box;background:rgba(20,18,30,.6);border:1px solid var(--line);color:var(--text);
+    border-radius:8px;padding:8px 10px;font-size:12px;outline:none;font-family:inherit;margin-bottom:7px}
+  .af-setup input:focus{border-color:var(--accent)}
+  .af-setup-row{display:flex;gap:8px}
+  .af-setup-row .btn{flex:1;font-size:12px;padding:8px}
+  .af-setup-msg{font-size:11px;line-height:1.6;margin-top:8px;color:var(--muted)}
+  .af-setup-msg.ok{color:#7dd97d}
+  .af-setup-msg.err{color:#ff8a80}
+  /* 回复来自 AI 还是本地匹配 */
+  .ai-badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;margin-bottom:7px;letter-spacing:.3px}
+  .ai-badge.on{color:#7dd97d;background:rgba(76,175,80,.16);border:1px solid rgba(76,175,80,.4)}
+  .ai-badge.off{color:#ffd166;background:rgba(255,209,102,.12);border:1px solid rgba(255,209,102,.38)}
+  .af-hint{font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:10px}
+  .af-input{display:flex;gap:8px}
+  .af-input input{flex:1;min-width:0;background:rgba(20,18,30,.6);border:1px solid var(--line);color:var(--text);
+    border-radius:9px;padding:9px 11px;font-size:13px;outline:none;font-family:inherit}
+  .af-input input:focus{border-color:var(--accent)}
+  #af-reply{margin-top:12px;font-size:13px;line-height:1.75;color:#e9e9f2}
+  #af-reply .af-env{display:inline-flex;align-items:center;gap:4px;margin:4px 7px 0 0;padding:6px 11px;
+    border-radius:10px;background:rgba(255,209,102,.12);border:1px solid rgba(255,209,102,.38);
+    color:#ffd166;cursor:pointer;font-size:12px;transition:.15s}
+  #af-reply .af-env:hover{background:rgba(255,209,102,.24)}
+  #af-reply .af-env .face-img{width:18px;height:18px;border-radius:50%;flex:none}
+  #af-reply .af-link{display:inline-block;margin-top:11px;color:var(--accent);cursor:pointer;
+    border:1px solid rgba(255,122,92,.42);padding:7px 13px;border-radius:9px;font-size:12px;transition:.15s}
+  #af-reply .af-link:hover{background:rgba(255,122,92,.14)}
+</style>
+</head>
+<body data-nav="sandbox" data-page-node-id="fxP8hRCATW95MkPjC5ynYh">
+<script>
+/* 防呆守卫：file:// 双击打开时 ES Module 会被浏览器拦截 → 白屏。见 index.html 说明。 */
+if (location.protocol === 'file:') {
+  document.addEventListener('DOMContentLoaded', function () {
+    var d = document.createElement('div');
+    d.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#16121f;color:#fff;display:flex;align-items:center;justify-content:center;padding:40px;font:14px/1.9 system-ui,"Microsoft YaHei",sans-serif;overflow:auto';
+    d.innerHTML = '<div style="max-width:640px">'
+      + '<div style="font-size:36px">⚠️</div>'
+      + '<h2 style="margin:12px 0 16px;font-size:21px">3D 沙盘不能直接双击打开</h2>'
+      + '<p style="color:#b9b4c8">当前是 <code style="color:#ff7a5c">file://</code> 协议，浏览器会拦截 ES 模块，同时 .glb 模型也无法读取，所以一直停在加载中——文件本身没坏。</p>'
+      + '<p style="color:#b9b4c8;margin-top:16px"><b style="color:#5ce1e6">正确打开方式：</b></p>'
+      + '<ol style="color:#d8d4e4;padding-left:22px">'
+      + '<li>回到项目文件夹，双击 <b style="color:#fff">启动服务器.bat</b></li>'
+      + '<li>浏览器访问 <code style="color:#ff7a5c">http://localhost:8000/index.html</code></li>'
+      + '</ol>'
+      + '</div>';
+    document.body.appendChild(d);
+  });
+}
+</script>
+<div id="app" data-page-node-id="5Bk5w3j1oKXANbVVlDRwD1">
+  <aside id="sidebar" data-page-node-id="O4GWB8B5roafspDDPI3Coo">
+    <h1 data-page-node-id="x6GO0r76frWJ2JxkUi7y3H">微光社区 · 沙盘</h1>
+    <div class="sub" data-page-node-id="Q6lrBiOdkFdF3EtCa6USFS">8 分区 · 点信标或左侧列表飞抵</div>
+    <div class="sec">技能搭子墙</div>
+    <button class="btn primary" id="btn-compose">✉️ 发布搭子帖</button>
+    <div class="hint" style="margin:8px 20px 0;font-size:11px">写一封信 → 打字机打上需求 → 盖时间印章 → 信封跳进<b style="color:#ffd166">中央广场</b>。点中央广场的信箱，翻看各区信封。</div>
+    <div class="sec">社区数据</div>
+    <div class="stats">
+      <div class="st"><b id="st-people">–</b><span><i class="live"></i>发布技能人数</span></div>
+      <div class="st"><b id="st-letters">–</b><span><i class="live"></i>邀约帖总数</span></div>
+    </div>
+    <button class="btn" id="btn-refresh" style="margin:0 20px 8px;width:calc(100% - 40px)">🔄 刷新数据</button>
+    <div class="sec" data-page-node-id="mk1CeU44BnhjomJJQfMAXk">分区导航</div>
+    <div id="zones" data-page-node-id="mN7LjDyflVXhGwWAQvxQa6"></div>
+    <div class="hint" style="margin:10px 20px 0;font-size:11px" data-page-node-id="hztXvbbhw9WNzVSOVkqgcZ">建筑顶部写了区名，<b style="color:#cfcfe0" data-page-node-id="HTstTidXtM8HFuKSCoOJWP">点开就能进该区技能广场</b>，看同区伙伴的工牌墙。</div>
+    <div class="sec" data-page-node-id="FSd8RLYDxlGdTdJnDsYPRP">分区详情 · AI 向导</div>
+    <div id="zoneinfo" data-page-node-id="1aDY7FLuthNU3dwCsvQabX"></div>
+  </aside>
+  <div id="stage" data-page-node-id="saubYS8tDYUjfhoJwpICv3">
+    <canvas id="c" data-page-node-id="ofMthjkbK90UmVaHgMd12p"></canvas>
+    <div id="toolbar" data-page-node-id="oUReoZJ0T6AqYDawDoExBg">
+      <div class="grp" data-page-node-id="fERaWrcXEbDf5oofrwrU4P"><span class="lab" data-page-node-id="0WwjZ874dH4EEeHVnLByQa">时段</span>
+        <button class="btn on" data-t="auto" data-page-node-id="kovA7RavTnWZp7OfYWgOlf">自动</button>
+        <button class="btn" data-t="wee" data-page-node-id="xHhx2NQiUPXJ7FegSFaFfD">凌晨</button>
+        <button class="btn" data-t="morning">早晨</button>
+        <button class="btn" data-t="noon" data-page-node-id="2KmFXSO58aEyGXbU1bb6xw">正午</button>
+        <button class="btn" data-t="dusk">傍晚</button>
+        <button class="btn" data-t="night" data-page-node-id="dYY03NjbmxNa4svbyqTF5A">夜间</button></div>
+      <div class="grp" data-page-node-id="LKwL6D9tg6PclEtsRb8Tjv"><span class="lab" data-page-node-id="a3ANvADcTj6DmCCBbitiGf">天气</span>
+        <button class="btn on" data-w="clear" data-page-node-id="joDWyEyGuReOOPnpSbKDg0">晴</button>
+        <button class="btn" data-w="rain" data-page-node-id="eD3jD89I1hPf9JDrI9uj0O">雨</button>
+        <button class="btn" data-w="snow" data-page-node-id="OXgra1H3gEMi7Xn405xFZu">雪</button></div>
+    </div>
+    <div id="hud" data-page-node-id="NCE2Tp79qOSDdn9iD11q9Y">
+      <div id="clock" data-page-node-id="PqtPb1DGPFs2KU2mwIyCY1">--:--:--</div>
+      <div id="clockstate" data-page-node-id="8ZU9l5HXH8QC2CkyeVW9uL">实时 · 自动时段</div>
+      <div id="selinfo" data-page-node-id="hBTazOP1i0YCnD47BUYi3X">未选中分区</div>
+    </div>
+    <div id="loading" data-page-node-id="FyJBohmkLqcYf7IRwL7cIk">场景加载中…（首次加载基础沙盘 + 8 区房间共约 38MB，稍候）</div>
+    <div id="drillveil"><div class="dv-in">
+      <div class="dv-ico" id="dv-ico">🏷</div>
+      <div class="dv-nm" id="dv-nm"></div>
+      <div class="dv-go">正 在 进 入</div>
+    </div></div>
+    <div id="browse-hud" style="display:none">
+      <div id="bh-title">📮 信封墙</div>
+      <div id="bh-hint"></div>
+      <div id="bh-sub"></div>
+    </div>
+    <button class="btn" id="btn-exit-browse" style="display:none">← 返回全景</button>
+
+    <!-- ===== 页面左下角 · AI 寻友助手（进沙盘即可见，替代原侧栏底部板块） ===== -->
+    <div id="ai-friend">
+      <button class="btn" id="ai-friend-toggle" title="AI 寻友助手" style="display:none">🤖</button>
+      <div id="ai-friend-panel" class="show">
+        <div class="af-head">🤖 AI 寻友 <span id="ai-status" class="ai-status off">未接入</span>
+          <button id="af-gear" title="AI 设置">⚙️</button>
+          <button id="af-close" title="收起">×</button></div>
+        <div class="af-hint">问搭子、问技能、问站外问题都行。比如「有没有人打排球」「怎么学吉他入门」「附近哪有球场」——AI 会同时翻站内信封+回答你的问题</div>
+        <div class="af-input">
+          <input type="text" id="af-q" placeholder="想找什么搭子？" autocomplete="off">
+          <button class="btn primary" id="af-send">问问</button>
+        </div>
+        <div id="af-setup" class="af-setup">
+          <div class="af-setup-t">接入大模型（OpenAI 兼容接口，密钥只存本机浏览器）</div>
+          <input type="text" id="ai-endpoint" placeholder="接口地址，如 https://api.deepseek.com/chat/completions" autocomplete="off">
+          <input type="text" id="ai-model" placeholder="模型名，如 deepseek-chat / qwen-plus / gpt-4o-mini" autocomplete="off">
+          <input type="password" id="ai-key" placeholder="API 密钥" autocomplete="off">
+          <div class="af-setup-row">
+            <button class="btn primary" id="ai-save">保存并启用</button>
+            <button class="btn" id="ai-test">测试连接</button>
+          </div>
+          <div id="ai-setup-msg" class="af-setup-msg"></div>
+        </div>
+        <div id="af-reply"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 发布搭子帖：信纸 → 打字机 → 印章 → 信封 → 投递 ===== -->
+<div class="overlay" id="compose" style="display:none">
+  <div class="backdrop" data-close></div>
+  <div class="overlay-stage">
+    <div class="letter" id="letter">
+      <div class="letter-head">微光社区 · 技能搭子寻觅帖</div>
+      <div id="letter-form">
+        <div class="frow">
+          <label>类型</label>
+          <select id="c-type">
+            <option value="offer">我能教（提供技能）</option>
+            <option value="want">我想学（求带）</option>
+            <option value="team">我要组队（找伙伴一起做）</option>
+          </select>
+          <label>分区</label>
+          <select id="c-zone"></select>
+        </div>
+        <div class="frow" style="flex-direction:column;align-items:stretch">
+          <label>需求（写给要寻觅的搭子）</label>
+          <textarea id="c-content" placeholder="例如：周六下午篮球半场约局，4缺1，会传球的来，快乐为主。"></textarea>
+          <div style="font-size:11px;color:#9a824f;margin-top:6px" id="c-suggest"></div>
+        </div>
+        <div class="frow">
+          <label>合适时间</label>
+          <input type="text" id="c-time" placeholder="如：周六下午">
+        </div>
+        <div class="frow">
+          <label>联系方式</label>
+          <input type="text" id="c-contact" placeholder="微信 / 手机号 / 昵称">
+        </div>
+        <div class="actions">
+          <button class="btn" data-close style="background:transparent;color:#6b5a38;border-color:rgba(120,96,50,.3)">取消</button>
+          <button class="btn primary" id="btn-stamp" style="background:linear-gradient(90deg,#c66b3a,#a8552a);border-color:#a8552a">盖章封缄 ▸</button>
+        </div>
+      </div>
+      <div class="letter-typewriter" id="typewriter" style="display:none"><span id="tw-text"></span><span class="tw-caret">▌</span></div>
+      <div class="stamp" id="stamp"><div class="stamp-inner"></div></div>
+    </div>
+
+    <div class="envelope2" id="envelope2" style="display:none">
+      <div class="env-flap"></div>
+      <div class="env-zone" id="env-zone"></div>
+      <div class="env-hint">已从需求中提取关键词，可增删修改：</div>
+      <div class="env-keywords" id="env-keywords"></div>
+      <div class="env2-actions">
+        <button class="btn" id="btn-back" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.4)">← 返回修改</button>
+        <button class="btn primary" id="btn-send" style="background:linear-gradient(90deg,#ff7a5c,#5ce1e6);border-color:var(--accent)">投递进广场 ✉</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 打开信封：完整需求 ===== -->
+<div class="overlay" id="letterview" style="display:none">
+  <div class="backdrop" data-close></div>
+  <button class="lv-nav lv-prev" id="lv-prev" title="上一封（←）">‹</button>
+  <button class="lv-nav lv-next" id="lv-next" title="下一封（→）">›</button>
+  <div class="overlay-stage">
+    <div class="letter letter-view" id="lv-card">
+      <div class="letter-head">技能搭子 · 寻觅帖</div>
+      <div class="lv-count" id="lv-count"></div>
+      <div class="lv-type" id="lv-type"></div>
+      <div class="lv-content" id="lv-content"></div>
+      <div class="lv-keywords" id="lv-keywords"></div>
+      <div class="lv-meta" id="lv-meta"></div>
+      <div class="lv-stamp" id="lv-stamp"><div class="stamp-inner"></div></div>
+      <button class="btn lv-close" data-close style="background:transparent;color:#6b5a38;border-color:rgba(120,96,50,.3)">← 回到信封墙</button>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "./three_lib/build/three.module.js",
+    "three/addons/": "./three_lib/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { mountNav } from './js/nav.js';
+import { ZONES, zoneXY, ZONE_BY_ID, extractKeywords, classifySkills } from './js/zones.js';
+import { aiExplainZone, aiFindFriends, setAI, getAI, aiConfigured, testAI } from './js/ai.js';
+import { addLetter, getLetters, getProfile, getUsers, usersInZone, faceHTML } from './js/store.js';
+import { attachTypewriter } from './js/typewriter.js';
+mountNav('sandbox');
+
+// ---------- 基础 ----------
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 2000);
+camera.position.set(0, 235, 540);   // 起点：远高空；进入沙盘时再推进到默认观赏位
+
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.domElement.style.position = 'absolute';
+labelRenderer.domElement.style.top = '0';
+labelRenderer.domElement.style.left = '0';
+labelRenderer.domElement.style.pointerEvents = 'none';
+document.getElementById('stage').appendChild(labelRenderer.domElement);
+
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 40; controls.maxDistance = 420;
+controls.maxPolarAngle = Math.PI * 0.49;
+controls.target.set(0, 0, 0);
+
+// ---------- 灯光 ----------
+const amb = new THREE.AmbientLight(0xffffff, 0.6);
+const dir = new THREE.DirectionalLight(0xffffff, 1.0);
+dir.position.set(60, 140, 80);
+const pw = new THREE.PointLight(0xff7a5c, 0.5, 400); pw.position.set(-80, 40, 60);
+const pc = new THREE.PointLight(0x5ce1e6, 0.5, 400); pc.position.set(80, 35, -60);
+scene.add(amb, dir, pw, pc);
+// 有了草坪，不再需要 GridHelper（网格线会让人觉得地面是水泥地）
+
+// ---------- 每区主题色点光（傍晚起渐亮，给夜景上一层霓虹氛围） ----------
+const zoneLights = ZONES.map(z => {
+  const [x, , zc] = zoneXY(z, 60);
+  const L = new THREE.PointLight(new THREE.Color(z.theme), 0, 170, 1.8);
+  L.position.set(x, 27, zc);          // 抬到楼顶之上，避免近距离把屋顶打爆
+  scene.add(L);
+  return L;
+});
+
+// ---------- 选择性泛光（当前关闭） ----------
+// 这套泛光原本只为「建筑霓虹灯条」服务：bloomComposer 只渲染 BLOOM_LAYER(1) 层
+// （灯条在那一层；灯球/招牌/玻璃都在默认层 0，不会被泛光炸成白团），
+// 再由 finalComposer 把泛光纹理叠回主画面。
+// 霓虹灯条已按需求移除 → 泛光层为空，继续跑只会白费一遍全场景渲染，故默认关闭。
+// 若将来要重新点亮建筑边缘：把 USE_BLOOM 改回 true，并给对应网格 enable(BLOOM_LAYER) 即可。
+const USE_BLOOM = false;
+const BLOOM_LAYER = 1;
+let bloomComposer = null, finalComposer = null, bloomPass = null;
+
+(async () => {
+  if (!USE_BLOOM) { console.log('[lumina] 泛光已关闭（霓虹灯条已移除）'); return; }
+  try {
+    const [{ EffectComposer }, { RenderPass }, { UnrealBloomPass }, { OutputPass }, { ShaderPass }] = await Promise.all([
+      import('three/addons/postprocessing/EffectComposer.js'),
+      import('three/addons/postprocessing/RenderPass.js'),
+      import('three/addons/postprocessing/UnrealBloomPass.js'),
+      import('three/addons/postprocessing/OutputPass.js'),
+      import('three/addons/postprocessing/ShaderPass.js'),
+    ]);
+    const W = canvas.clientWidth || 1, H = canvas.clientHeight || 1;
+
+    // ① 泛光层
+    bloomComposer = new EffectComposer(renderer);
+    bloomComposer.renderToScreen = false;
+    bloomComposer.addPass(new RenderPass(scene, camera));
+    // 只渲染隔离层；阈值不能太低，否则连暗线也炸成一片光雾（之前 0.06 就是这样翻车的）
+    bloomPass = new UnrealBloomPass(new THREE.Vector2(W, H), 0.42, 0.28, 0.30);
+    bloomComposer.addPass(bloomPass);
+
+    // ② 合成层：正常画面 + 泛光纹理
+    finalComposer = new EffectComposer(renderer);
+    finalComposer.addPass(new RenderPass(scene, camera));
+    const mixPass = new ShaderPass(new THREE.ShaderMaterial({
+      uniforms: {
+        baseTexture: { value: null },
+        bloomTexture: { value: bloomComposer.renderTarget2.texture },
+      },
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: 'uniform sampler2D baseTexture; uniform sampler2D bloomTexture; varying vec2 vUv;\n' +
+        'void main(){ gl_FragColor = texture2D(baseTexture, vUv) + texture2D(bloomTexture, vUv); }',
+    }), 'baseTexture');
+    mixPass.needsSwap = true;
+    finalComposer.addPass(mixPass);
+    finalComposer.addPass(new OutputPass());
+
+    bloomComposer.setSize(W, H);
+    finalComposer.setSize(W, H);
+    console.log('[lumina] 选择性泛光已启用 · 泛光层 = 建筑边缘骨架（灯球不泛光）');
+    applyState();   // 补上泛光强度
+  } catch (err) {
+    console.warn('[lumina] 泛光不可用，回退直接渲染', err);
+    bloomComposer = null; finalComposer = null; bloomPass = null;
+  }
+})();
+
+// 渲染管线：先只画泛光层 → 再合成
+function renderPipeline() {
+  if (!bloomComposer || !finalComposer) { renderer.render(scene, camera); return; }
+  const bg = scene.background;
+  const mask = camera.layers.mask;
+  scene.background = null;            // 背景不进泛光层，否则整屏发白
+  camera.layers.set(BLOOM_LAYER);     // 只挑泛光层（灯球不在其中）
+  bloomComposer.render();
+  camera.layers.mask = mask;
+  scene.background = bg;
+  finalComposer.render();
+}
+
+// ---------- 天气粒子 ----------
+function makeParticles(n, color, size, speed) {
+  const g = new THREE.BufferGeometry();
+  const p = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { p[i*3]=(Math.random()-0.5)*220; p[i*3+1]=Math.random()*150; p[i*3+2]=(Math.random()-0.5)*220; }
+  g.setAttribute('position', new THREE.BufferAttribute(p, 3));
+  const m = new THREE.PointsMaterial({ color, size, transparent:true, opacity:0.6, depthWrite:false });
+  const pts = new THREE.Points(g, m); pts.visible = false; pts.userData = { n, speed }; scene.add(pts); return pts;
+}
+const rain = makeParticles(1800, 0x9ecbff, 0.6, 1.2);
+const snow = makeParticles(1200, 0xffffff, 0.9, 0.3);
+
+// ---------- 状态 ----------
+let timeMode = 'auto', weather = 'clear', isDay = true;
+
+// 一天 5 时段配色：凌晨 / 早晨 / 正午 / 傍晚 / 夜间
+// body/stage/side/nav 为页面整体渐变；amb/dir 为场景灯光；fog 为雾色。
+// 注：下面每档里的 edge / bloom 两个字段，原先是给「建筑霓虹灯条 + 泛光」用的，
+//     灯条移除后已不再被读取（保留是为了不改动结构，日后要重启边缘发光可直接复用）。
+const TIMES = {
+  wee: { name:'凌晨', day:false,
+    body:'radial-gradient(120% 120% at 70% 12%,#100f28 0%,#06050f 58%)',
+    stage:'radial-gradient(120% 120% at 70% 15%,#100f28 0%,#06050f 62%)',
+    side:'linear-gradient(180deg,#0e0d20,#080712)',
+    nav:'rgba(8,7,18,.86)',
+    amb:{ i:0.32, c:0x9298ff }, dir:{ i:0.22, c:0x7a84ff, pos:[40,120,90] },
+    pw:0.9, pc:0.9, fog:['#0b0b26',120,360],
+    edge:0.24, bloom:0.28, light:6 },
+  morning: { name:'早晨', day:true,
+    body:'radial-gradient(120% 120% at 70% 12%,#5a6f96 0%,#171a26 58%)',
+    stage:'radial-gradient(120% 120% at 70% 15%,#7e9cc4 0%,#3a4a6a 55%,#1a1d2b 100%)',
+    side:'linear-gradient(180deg,#232837,#12141d)',
+    nav:'rgba(20,23,33,.82)',
+    // 天顶湛蓝 → 中空浅蓝 → 地平线暖金（清透的晴朗早晨）
+    sky:[[0.00,'#2f66b4'],[0.30,'#8fb9e0'],[0.42,'#cfe0ee'],[0.485,'#ffd9a6'],[0.545,'#e8a878'],[0.62,'#8a6a5a'],[1.00,'#3c3430']],
+    amb:{ i:0.50, c:0xbcd4ff }, dir:{ i:1.22, c:0xffd8a2, pos:[150,42,105] },
+    pw:0.35, pc:0.35, fog:['#e0c9a8',220,700],
+    edge:0.08, bloom:0.22, light:5 },
+  noon: { name:'正午', day:true,
+    body:'radial-gradient(120% 120% at 70% 12%,#a9c39a 0%,#5e7358 58%)',
+    stage:'radial-gradient(120% 120% at 70% 15%,#dfeccd 0%,#93b184 48%,#3d5240 100%)',
+    side:'linear-gradient(180deg,#2f3a2c,#161b16)',
+    nav:'rgba(34,42,32,.88)',
+    // 晴空：天顶clear蓝 → 地平线乳白 → 一点暖阳带（清透、鲜艳，但不过曝）
+    sky:[[0.00,'#3f86d4'],[0.30,'#8fc0e8'],[0.47,'#d6e9f2'],[0.53,'#f4efc9'],[0.60,'#d3e0c2'],[0.80,'#93ab84'],[1.00,'#6d8461']],
+    // 冷环境光（天光补色）+ 暖主光 → 阴影有颜色，画面才"清透"
+    amb:{ i:0.66, c:0xcfe3ff }, dir:{ i:1.16, c:0xfff4d2, pos:[30,200,50] },
+    pw:0.10, pc:0.10, fog:['#cfe0e4',300,860],
+    edge:0.03, bloom:0.10, light:0 },
+  dusk: { name:'傍晚', day:true,
+    body:'radial-gradient(120% 120% at 70% 12%,#5c3122 0%,#150d1a 58%)',
+    stage:'radial-gradient(120% 120% at 70% 15%,#87462f 0%,#42212c 55%,#170e1a 100%)',
+    side:'linear-gradient(180deg,#261819,#110b12)',
+    nav:'rgba(24,14,13,.85)',
+    // 天顶深蓝 → 紫 → 橙金地平线（干净的落日，不是灰棕）；整体降一档曝光，避免过曝发白
+    sky:[[0.00,'#1a3378'],[0.28,'#5d4a96'],[0.42,'#c1573a'],[0.47,'#e8843f'],[0.52,'#e8a94f'],[0.585,'#94462f'],[0.68,'#41222b'],[1.00,'#20111b']],
+    amb:{ i:0.28, c:0x9aa8ff }, dir:{ i:0.66, c:0xff8a45, pos:[-160,40,90] },
+    pw:0.46, pc:0.28, fog:['#9a6141',260,760],
+    edge:0.16, bloom:0.22, light:6 },
+  night: { name:'夜间', day:false,
+    body:'radial-gradient(120% 120% at 70% 12%,#1a1530 0%,#0b0a13 58%)',
+    stage:'radial-gradient(120% 120% at 70% 15%,#1a1530 0%,#0b0a13 60%)',
+    side:'linear-gradient(180deg,#14121e,#0a0910)',
+    nav:'rgba(11,10,19,.82)',
+    amb:{ i:0.28, c:0xffffff }, dir:{ i:0.3, c:0x6a7cff, pos:[60,140,80] },
+    pw:1.1, pc:1.1, fog:['#0a0820',120,360],
+    edge:0.24, bloom:0.32, light:11 },
+};
+
+function autoVisual() {
+  const h = new Date().getHours();
+  if (h >= 2 && h < 6) return 'wee';
+  if (h >= 6 && h < 9) return 'morning';
+  if (h >= 9 && h < 16) return 'noon';
+  if (h >= 16 && h < 19) return 'dusk';
+  return 'night';
+}
+
+// ---------- 清透天空：等距柱状渐变贴图 ----------
+// 纯色背景在暖调时段会整片发灰（雾色 = 天空色那种做法尤其明显）。
+// 这里生成一张 2:1 的「天顶→地平线→地面」渐变，用 equirect 映射贴成天空球，
+// 暖色地平线会随视角始终停在真正的地平线上，而不是死贴在屏幕某一固定高度。
+// v=0 是正下方(天底)，v=1 是正上方(天顶)，所以 stops 的 position 就是画面纵向位置。
+const skyCache = {};
+function makeSkyTexture(stops) {
+  const cv = document.createElement('canvas');
+  cv.width = 16; cv.height = 512;
+  const g = cv.getContext('2d');
+  const grd = g.createLinearGradient(0, 0, 0, 512);   // 0 = 天顶, 512 = 天底
+  stops.forEach(([pos, col]) => grd.addColorStop(pos, col));
+  g.fillStyle = grd; g.fillRect(0, 0, 16, 512);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.mapping = THREE.EquirectangularReflectionMapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+function skyFor(v, T) {
+  if (!T.sky) return new THREE.Color(T.fog[0]);
+  if (!skyCache[v]) skyCache[v] = makeSkyTexture(T.sky);
+  return skyCache[v];
+}
+
+function applyState() {
+  const v = (timeMode === 'auto') ? autoVisual() : timeMode;
+  const T = TIMES[v] || TIMES.night;
+  isDay = T.day;
+  // 场景灯光
+  amb.color.set(T.amb.c); amb.intensity = T.amb.i;
+  dir.color.set(T.dir.c); dir.intensity = T.dir.i; dir.position.set(T.dir.pos[0], T.dir.pos[1], T.dir.pos[2]);
+  pw.intensity = T.pw; pc.intensity = T.pc;
+  scene.fog = new THREE.Fog(T.fog[0], T.fog[1], T.fog[2]);
+  // 天空：有 sky 的时段用渐变天空球，其余仍用雾色单色
+  scene.background = skyFor(v, T);
+  // 每区主题色氛围光：傍晚渐亮、夜间最浓
+  zoneLights.forEach(L => { L.intensity = T.light || 0; });
+  // （原先这里设置泛光强度与建筑边缘自发光强度；霓虹灯条已移除，两项均不再需要）
+  // 页面整体色彩
+  document.body.style.background = T.body;
+  document.getElementById('stage').style.background = T.stage;
+  document.getElementById('sidebar').style.background = T.side;
+  const nav = document.getElementById('topnav'); if (nav) nav.style.background = T.nav;
+  document.body.classList.toggle('bright', v === 'noon');
+  // 天气粒子
+  rain.visible = (weather === 'rain'); snow.visible = (weather === 'snow');
+  applyDayNight(isDay);
+  document.getElementById('clockstate').textContent =
+    `实时 · ${timeMode === 'auto' ? '自动→' + T.name : T.name} · ${weather === 'clear' ? '晴' : weather === 'rain' ? '雨' : '雪'}`;
+}
+
+// ---------- 模型加载 ----------
+const loadingEl = document.getElementById('loading');
+let modelReady = false;
+let model = null, rooms = null;   // model = 基础沙盘；rooms = 8 区室内剖面房间
+const MODEL_URL = './assets/lumina/lumina_commons_v2.glb';  // 地面 / 路网 / 围栏 / 树 / 浮标
+const ROOMS_URL = './assets/lumina/lumina_rooms.glb';       // 10 区房间（方案 A：替换方块楼）
+
+// 方案 A：基础沙盘里「已被房间替换」的部分剔除
+//   保留 Z00_beacon（中央浮标）、U_*（地面/地块/路网/围栏）、G_*（绿化）
+//   剔除 Z01~Z10 的方块英雄楼与旧道具/地环、C_* 区内通用楼
+function pruneBase(root) {
+  let n = 0;
+  root.children.forEach(k => {
+    const nm = k.name || '';
+    if (!nm || nm === 'Z00_beacon') return;
+    if (/^Z\d\d_/.test(nm) || /^C_/.test(nm)) { k.userData.pruned = true; k.visible = false; n++; }
+  });
+  console.log('[lumina] 基础沙盘剔除对象 =', n);
+}
+
+// ---------- 中央广场亮度削减 ----------
+// 中心广场的发光盘（U_plaza / LBG_beacon_glow，emissive 0.86/0.90）与中心信标 Z00_beacon
+// 本身就很亮，叠加泛光后刺眼。这里把 color 与 emissive 同时乘一个系数：
+// 标准材质的亮度 ≈ color×光照 + emissive，两者同比例缩放即整体线性降亮。
+// 想再调，只改这一个数字即可（0.5 = 降低 50%）。
+const PLAZA_DIM = 0.5;
+function dimCenter(root) {
+  if (!root) return;
+  const done = new Set();
+  let count = 0;
+  const inCenter = o => {
+    let n = o;
+    while (n) {
+      const nm = n.name || '';
+      if (/^U_plaza/i.test(nm) || /Z00/i.test(nm)) return true;
+      n = n.parent;
+    }
+    return false;
+  };
+  root.traverse(o => {
+    if (!(o.isMesh || o.isPoints || o.isLine || o.isSprite)) return;
+    if (!inCenter(o)) return;
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    mats.forEach(m => {
+      if (!m || done.has(m.uuid)) return;
+      done.add(m.uuid);
+      if (m.color) m.color.multiplyScalar(PLAZA_DIM);
+      if (m.emissive) m.emissive.multiplyScalar(PLAZA_DIM);
+      if (typeof m.emissiveIntensity === 'number') m.emissiveIntensity *= PLAZA_DIM;
+    });
+    count++;
+  });
+  console.log('[lumina] 中央广场亮度降至', Math.round(PLAZA_DIM * 100) + '% · 影响网格 =', count);
+}
+
+// ---------- 建筑灯泡/灯带/玻璃降亮 ----------
+// 房间模型里有一部分材质自带 KHR_materials_emissive_strength，
+// emissiveFactor 又都是 1.0，泛光一打就在外立面上炸成一大片白光。
+// 其中 glass 挂在 room_shell 上（整栋楼的窗面都亮），theme 是分区主题色的室内发光，
+// 这两个面积最大、贡献最猛，所以给得更狠。
+// 标准材质的发光量 = emissive(色) × emissiveIntensity，只缩一个即可（不会双重打折）。
+// 想再调，只改这张表里的数字。
+const LAMP_DIM = { glass: 0.26, theme2: 0.30, theme: 0.30, bulb: 0.48, lamp: 0.50, sign: 0.50, screen: 0.40 };
+function dimFactor(name) {
+  const n = String(name || '').toLowerCase();
+  for (const k in LAMP_DIM) if (n.includes(k)) return LAMP_DIM[k];
+  return null;                       // 不命中 → 完全不动
+}
+function dimLamps(root) {
+  if (!root) return;
+  const done = new Set();
+  const hit = [];
+  root.traverse(o => {
+    if (!o.isMesh) return;
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    mats.forEach(m => {
+      if (!m || done.has(m.uuid)) return;
+      const f = dimFactor(m.name);
+      if (f == null) return;
+      done.add(m.uuid);
+      if (typeof m.emissiveIntensity === 'number' && m.emissiveIntensity > 1) {
+        m.emissiveIntensity *= f;                 // 有 emissive_strength：缩强度
+      } else if (m.emissive) {
+        m.emissive.multiplyScalar(f);             // 否则缩发光色
+      }
+      hit.push(m.name + '×' + f);
+    });
+  });
+  console.log('[lumina] 灯/玻璃降亮 =', hit.length, '个：', hit.join(', '));
+}
+
+// ---------- 建筑霓虹灯条：已按需求移除 ----------
+// 原来 buildNeonStrips() 会取建筑外壳的棱、沿边生成实体灯管并塞进泛光层，
+// applyNeonGlow() 再按五档时段控制亮灭。现已全部去掉：
+// 建筑保持纯实色填充，不再有任何边缘发光、描边或霓虹边框。
+
+// 兜底提示：迟迟不出来就说清原因，别让人对着"加载中"发呆
+setTimeout(() => {
+  if (modelReady) return;
+  loadingEl.innerHTML = '仍在加载… 基础沙盘 + 8 区房间共约 38MB（房间含精细篮球场模型约 32MB），首次较慢属正常。<br>'
+    + '<span style="font-size:11px;color:#8f8aa3">若超过 30 秒仍无变化：① 确认地址栏是 <b>http://localhost</b> 开头（不是 file://）；'
+    + '② 按 F12 打开控制台看红色报错；③ 或刷新页面重试。</span>';
+}, 15000);
+
+const loader = new GLTFLoader();
+const loadGLB = (url, onProg) => new Promise((res, rej) => loader.load(url, res, onProg, rej));
+const prog = { base: 0, rooms: 0 };
+function track(key) {
+  return ev => {
+    if (modelReady) return;
+    if (ev && ev.lengthComputable && ev.total) {
+      prog[key] = Math.min(99, Math.round(ev.loaded / ev.total * 100));
+      const avg = Math.round((prog.base + prog.rooms) / 2);
+      loadingEl.textContent = `场景加载中… ${avg}%（沙盘 ${prog.base}% · 房间 ${prog.rooms}%）`;
+    }
+  };
+}
+
+Promise.all([
+  loadGLB(MODEL_URL, track('base')),
+  loadGLB(ROOMS_URL, track('rooms')),
+]).then(([gBase, gRooms]) => {
+  model = gBase.scene;  scene.add(model);
+  rooms = gRooms.scene; scene.add(rooms);
+  pruneBase(model);
+  dimCenter(model);
+  dimLamps(rooms);
+  applyDayNight(isDay);
+  modelReady = true;
+  loadingEl.style.display = 'none';
+  addBuildingLabels();
+  applyState();
+  console.log('[lumina] 沙盘对象 =', model.children.length, '· 房间对象 =', rooms.children.length);
+}).catch(err => {
+  console.error('[lumina] 模型加载失败', err);
+  controls.enabled = true;   // 兜底：模型失败时也要能操作，别卡在禁用态
+  const isFile = location.protocol === 'file:';
+  loadingEl.innerHTML = '<div style="text-align:center;max-width:470px">'
+    + '<div style="font-size:26px;margin-bottom:8px">⚠️</div>'
+    + '<div style="color:#ff9c8a;font-weight:600">模型加载失败</div>'
+    + '<div style="font-size:12px;margin-top:8px;line-height:1.8">'
+    + (isFile
+        ? '当前是 <b>file://</b> 协议，浏览器不允许读取 .glb。请用 <b>启动服务器.bat</b> 打开。'
+        : '请确认 <code>assets/lumina/lumina_commons_v2.glb</code> 与 <code>assets/lumina/lumina_rooms.glb</code> 都存在，且页面是通过 http:// 服务器打开的。')
+    + '</div></div>';
+});
+
+// 每间房上方挂分区名牌；点击 → 该区技能广场（成员工牌墙）
+function addBuildingLabels() {
+  ZONES.forEach(z => {
+    const [x, , zc] = zoneXY(z, 60);        // 房间地块在 R=60
+    const div = document.createElement('div');
+    div.className = 'label3d bld-label';
+    div.style.borderColor = z.theme;
+    div.style.boxShadow = `0 0 14px ${z.theme}66`;
+    div.innerHTML = `<b style="color:${z.theme}">${z.name}</b><span style="font-size:11px">点开进技能广场 ▸</span>`;
+    div.onclick = () => drillInto(z.id);
+    const lab = new CSS2DObject(div);
+    lab.position.set(x, 10.5, zc);
+    scene.add(lab);
+  });
+}
+
+// 昼夜切换：按 _day 后缀配对显隐（基础沙盘 + 房间两份模型一起切）
+function applyDayNight(day) {
+  [model, rooms].forEach(root => {
+    if (!root) return;
+    const byBase = {};
+    root.children.forEach(k => {
+      const nm = k.name || '';
+      if (k.userData.pruned) { k.visible = false; return; }
+      const base = nm.endsWith('_day') ? nm.slice(0, -4) : nm;
+      (byBase[base] = byBase[base] || []).push(k);
+    });
+    Object.values(byBase).forEach(arr => {
+      if (arr.length === 2) {
+        arr.forEach(k => { k.visible = day ? k.name.endsWith('_day') : !k.name.endsWith('_day'); });
+      } else {
+        arr.forEach(k => { k.visible = true; });   // 单份对象始终显示
+      }
+    });
+  });
+}
+
+// ---------- 信标（10 区） ----------
+const beacons = [];
+ZONES.forEach(z => {
+  const [x, , zc] = zoneXY(z, 52);
+  const g = new THREE.Group(); g.position.set(x, 0, zc);
+  const colMat = new THREE.MeshBasicMaterial({ color:0x5ce1e6, transparent:true, opacity:0.22, side:THREE.DoubleSide });
+  const col = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 6, 16, 1, true), colMat);
+  col.position.y = 3; g.add(col);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(2.2, 0.14, 10, 40), new THREE.MeshBasicMaterial({ color:0xff7a5c }));
+  ring.rotation.x = Math.PI / 2; ring.position.y = 6.2; g.add(ring);
+  g.userData = { ring, zone: z };
+  const div = document.createElement('div'); div.className = 'label3d';
+  div.innerHTML = `<b>${z.beacon}</b><span>${z.name}</span>`;
+  div.onclick = () => focusZone(z);
+  const lab = new CSS2DObject(div); lab.position.set(0, 8, 0); g.add(lab);
+  scene.add(g); beacons.push(g);
+});
+
+// ---------- 侧栏分区列表 ----------
+const zonesEl = document.getElementById('zones');
+let curZone = null;
+ZONES.forEach(z => {
+  const el = document.createElement('div'); el.className = 'zone';
+  el.innerHTML = `<span class="dot" style="background:${z.theme};box-shadow:0 0 8px ${z.theme}"></span>`
+    + `<span class="nm">${z.name}</span><span class="cnt" id="zc-${z.id}">–</span>`;
+  el.onclick = () => focusZone(z);
+  zonesEl.appendChild(el);
+});
+
+// ---------- 侧栏社区数据（人数 / 帖数 / 各区人数，实时刷新） ----------
+// 统计口径：
+//   发布技能人数 = 至少写了 1 个技能的成员（一人跨多区只算一次）
+//   邀约帖总数   = 信封（搭子寻觅帖）总数
+//   各区技能人数 = 该建筑工牌墙的成员数（跨区成员会被多栋楼各计一次）
+// 注意：这里在 `const $ = ...` 之前，不能用 $（TDZ），故用局部 byId。
+const byId = id => document.getElementById(id);
+function refreshStats(flash = true) {
+  const users = getUsers();
+  const people = users.filter(u => (u.skills || []).length > 0).length;
+  const letters = getLetters().length;
+
+  const bump = (el, val) => {
+    if (!el) return;
+    const old = el.textContent;
+    el.textContent = String(val);
+    if (flash && old !== '–' && old !== String(val)) {
+      el.classList.add('bump'); setTimeout(() => el.classList.remove('bump'), 420);
+    }
+  };
+  bump(byId('st-people'), people);
+  bump(byId('st-letters'), letters);
+  ZONES.forEach(z => bump(byId('zc-' + z.id), usersInZone(z.id).length));
+}
+
+byId('btn-refresh').onclick = () => {
+  refreshStats();
+  toast(`数据已刷新 · ${byId('st-people').textContent} 人发布技能 · ${byId('st-letters').textContent} 封邀约帖`);
+};
+refreshStats(false);
+// 实时更新：其它标签页改动（storage）、切回本页（focus/pageshow）、以及每 5 秒轮询
+window.addEventListener('storage', () => refreshStats());
+window.addEventListener('focus', () => refreshStats());
+window.addEventListener('pageshow', () => refreshStats(false));
+setInterval(() => refreshStats(), 5000);
+
+function focusZone(z) {
+  curZone = z;
+  const [x, , zc] = zoneXY(z, 60);
+  controls.target.set(x, 3, zc);
+  camera.position.set(x + 22, 26, zc + 34);
+  document.querySelectorAll('.zone').forEach((e, i) => e.classList.toggle('active', ZONES[i].id === z.id));
+  document.getElementById('selinfo').innerHTML = `<b>${z.name}</b>（地标 ${z.hero}）<br>典型技能：${z.skills.join('、')}`;
+  document.getElementById('zoneinfo').innerHTML =
+    `<div class="zt" style="color:${z.theme}">${z.name} · ${z.hero}</div>${z.desc}
+     <div class="zskills">${z.skills.map(s => `<span class="tag">${s}</span>`).join('')}</div>
+     <button class="btn primary" id="go-plaza" style="width:100%;margin-bottom:8px">🏷 进 ${z.name} · 技能广场 ▸</button>
+     <button class="btn primary" id="ai-explain">✨ AI 给我讲讲</button>
+     <div id="ai-text" style="margin-top:10px;color:var(--muted)"></div>`;
+  document.getElementById('go-plaza').onclick = () => drillInto(z.id);
+  document.getElementById('ai-explain').onclick = async () => {
+    const t = document.getElementById('ai-text'); t.textContent = 'AI 思考中…';
+    t.textContent = await aiExplainZone(z.id);
+  };
+}
+
+// ---------- 点击建筑本体 → 跳转该区技能广场（工牌墙） ----------
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+let downXY = null;
+
+// 从命中对象的名字里解析分区号：房间网格名形如 Z05_room_shell / Z05_room_furn …
+// 这里的数字即分区 id（1/2/3/4/5/8/9/10），与 js/zones.js 的 id 一一对应。
+function zoneIdFromName(nm) {
+  const m = (nm || '').match(/^Z(\d\d)/);
+  return m ? parseInt(m[1], 10) : null;
+}
+function pickBuilding(ev) {
+  if (!rooms) return null;
+  const rect = canvas.getBoundingClientRect();
+  pointer.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObjects(rooms.children, true);
+  for (const h of hits) {
+    let o = h.object;
+    while (o) {                                   // 向上回溯到带 Zxx_ 前缀的节点
+      const zid = zoneIdFromName(o.name);
+      if (zid !== null && ZONE_BY_ID[zid]) return zid;
+      o = o.parent;
+    }
+  }
+  return null;
+}
+// ---------- 通用小工具 ----------
+const $ = id => document.getElementById(id);
+const esc = s => (s || '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const ZONE_ICON = { 1:'📚', 2:'🎮', 3:'🍜', 4:'🏀', 5:'🎨', 8:'🐾', 9:'❤️', 10:'🧹' };
+const ease = k => 1 - Math.pow(1 - k, 3);
+const easeInOut = k => k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+
+// 轻量补间系统（由 animate 循环统一推进）
+// 注意：dur 以「秒」为单位（调用方一律传 0.32 / 1.0 / 2.6 这种），
+// 而 animate 里按毫秒算进度，所以这里必须 ×1000 —— 之前漏了，
+// 导致 k 第一帧就等于 1，所有动画（镜头飞行、信封跳入、翻页）全部瞬移。
+const tweens = [];
+function addTween(fn, dur, onDone) {
+  const d = Math.max(16, (dur || 0.4) * 1000);
+  tweens.push({ fn, dur: d, start: performance.now(), onDone });
+}
+function flyCamera(pos, target, dur = 1.1, onDone = null) {
+  const p0 = camera.position.clone(), t0 = controls.target.clone();
+  addTween(k => {
+    camera.position.lerpVectors(p0, pos, ease(k));
+    controls.target.lerpVectors(t0, target, ease(k));
+    if (k >= 1) { if (onDone) onDone(); return true; }
+    return false;
+  }, dur);
+}
+function toast(msg) {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;left:50%;bottom:30px;transform:translateX(-50%);z-index:400;background:rgba(20,18,30,.94);border:1px solid var(--line);border-radius:12px;padding:10px 18px;font-size:13px;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.5)';
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.transition = 'opacity .5s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 2200);
+}
+
+// ---------- 点建筑 → 镜头推进 → 遮罩淡入 → 切页 ----------
+// 之前是直接 location.href 瞬间跳走，观感很硬；现在先推近到那栋楼，
+// 画面淡入该区主题色并把区名亮出来，再跳转。
+let drilling = false;
+function drillInto(zid) {
+  const z = ZONE_BY_ID[zid];
+  if (!z || drilling) return;
+  if (typeof browse !== 'undefined' && browse.active) return;   // 信封墙浏览态下不跳
+  drilling = true;
+  controls.enabled = false;
+  canvas.style.cursor = 'default';
+
+  const veil = $('drillveil');
+  $('dv-ico').textContent = ZONE_ICON[z.id] || '🏷';
+  $('dv-nm').textContent = z.name;
+  $('dv-nm').style.color = '#fff';
+  veil.style.background = `radial-gradient(circle at 50% 52%, ${z.theme} 0%, ${z.theme}b3 26%, rgba(8,6,16,.97) 72%)`;
+  veil.style.opacity = '0';
+  veil.querySelector('.dv-in').style.opacity = '0';
+
+  // 镜头：贴到该楼外侧偏上，看向楼体中部
+  const [x, , zc] = zoneXY(z, 60);
+  const out = new THREE.Vector3(x, 0, zc).normalize();
+  const toPos = new THREE.Vector3(x + out.x * 15, 11.5, zc + out.z * 15);
+  const toTgt = new THREE.Vector3(x, 8, zc);
+
+  const DUR = 0.95;
+  flyCamera(toPos, toTgt, DUR, () => {
+    setTimeout(() => { location.href = `./skills.html?zone=${zid}`; }, 300);
+  });
+  // 与飞行同步：后半程遮罩淡入 + 区名浮出
+  addTween(k => {
+    const p = Math.max(0, (k - 0.46) / 0.54);
+    veil.style.opacity = String(p * 0.96);
+    veil.querySelector('.dv-in').style.opacity = String(Math.max(0, Math.min(1, (p - 0.25) / 0.75)));
+    veil.querySelector('.dv-in').style.transform = `translateY(${(1 - p) * 8}px)`;
+    return k >= 1;
+  }, DUR);
+}
+
+// ---------- 信封 3D 网格 ----------
+function makeEnvelopeMesh(letter, zone, withLabel = true) {
+  const g = new THREE.Group();
+  const col = new THREE.Color(zone ? zone.theme : '#d8a86b');
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(2.6, 1.7, 0.08),
+    new THREE.MeshStandardMaterial({ color: col, roughness: 0.55, emissive: col.clone().multiplyScalar(0.12) })
+  );
+  g.add(body);
+  const shape = new THREE.Shape();
+  shape.moveTo(-1.3, 0.85); shape.lineTo(1.3, 0.85); shape.lineTo(0, -0.85); shape.closePath();
+  const flap = new THREE.Mesh(
+    new THREE.ShapeGeometry(shape),
+    new THREE.MeshStandardMaterial({ color: col.clone().multiplyScalar(0.72), roughness: 0.6, side: THREE.DoubleSide })
+  );
+  flap.position.z = 0.045;
+  g.add(flap);
+  if (withLabel) {
+    const div = document.createElement('div');
+    div.className = 'env-label';
+    const kw = (letter.keywords || []).slice(0, 3).join(' · ');
+    div.innerHTML = `<b>${esc(zone ? zone.name : '')}</b><span>${esc(kw || (letter.type === 'offer' ? '我能教' : (letter.type === 'team' ? '我要组队' : '我想学')))}</span>`;
+    const lab = new CSS2DObject(div);
+    lab.position.set(0, 1.5, 0);
+    g.add(lab);
+    g.userData.labelDiv = div;
+  }
+  g.userData.letter = letter; g.userData.zone = zone;
+  return g;
+}
+function disposeEnv(obj) {
+  obj.traverse(o => {
+    if (o.geometry) o.geometry.dispose();
+    if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.dispose());
+    // CSS2DObject 的文字标签是挂在 body 里的 DOM 元素，从场景移除 mesh 时不会自动回收，
+    // 必须手动摘掉，否则退出信封墙后会残留一片浮动的提示框（画面中那些"工坊音乐区/点开翻看"）。
+    if (o.isCSS2DObject && o.element && o.element.parentNode) {
+      o.element.parentNode.removeChild(o.element);
+    }
+  });
+}
+
+// ---------- 发布搭子帖：信纸 → 打字机 → 印章 → 信封 → 投递 ----------
+let draft = null, zoneTouched = false;
+
+function openCompose() {
+  const sel = $('c-zone');
+  if (!sel.options.length) sel.innerHTML = ZONES.map(z => `<option value="${z.id}">${z.name}</option>`).join('');
+  const p = getProfile();
+  if (p.contact) $('c-contact').value = p.contact;
+  $('letter').style.display = 'block';
+  $('letter').classList.remove('folded');
+  $('letter-form').style.display = 'block';
+  $('typewriter').style.display = 'none';
+  $('stamp').classList.remove('stamped');
+  $('envelope2').style.display = 'none';
+  $('compose').style.display = 'flex';
+  draft = null; zoneTouched = false; $('c-suggest').textContent = '';
+}
+$('btn-compose').onclick = openCompose;
+
+// 点击信纸上的输入框 → 下方升起沉浸式复古打字机（按键下沉 / 字模臂敲击 / 拼音候选）
+attachTypewriter($('c-content'), { label: '搭子需求', multiline: true });
+attachTypewriter($('c-time'),    { label: '合适时间', singleLine: true });
+attachTypewriter($('c-contact'), { label: '联系方式', singleLine: true });
+
+// 智能分区：用户未手动改时，按需求内容建议分区
+$('c-content').addEventListener('input', () => {
+  const c = $('c-content').value.trim();
+  if (c.length < 4) { $('c-suggest').textContent = ''; return; }
+  if (zoneTouched) return;
+  const sug = classifySkills(extractKeywords(c, null))[0];
+  if (sug) { $('c-zone').value = String(sug); $('c-suggest').textContent = '✨ 已根据内容建议分区：' + ZONE_BY_ID[sug].name; }
+});
+$('c-zone').addEventListener('change', () => { zoneTouched = true; $('c-suggest').textContent = ''; });
+
+function typewrite(text, done) {
+  const el = $('tw-text'); el.textContent = '';
+  let i = 0;
+  const t = setInterval(() => {
+    el.textContent = text.slice(0, ++i);
+    if (i >= text.length) { clearInterval(t); done(); }
+  }, 55);
+}
+$('btn-stamp').onclick = () => {
+  const content = $('c-content').value.trim();
+  if (!content) { $('c-content').focus(); $('c-suggest').textContent = '请先写下你的搭子需求'; return; }
+  const time = $('c-time').value.trim() || '时间待定';
+  const contact = $('c-contact').value.trim() || getProfile().contact || '匿名居民';
+  draft = { zone: parseInt($('c-zone').value, 10), type: $('c-type').value, content, time, contact };
+  $('letter-form').style.display = 'none';
+  $('typewriter').style.display = 'block';
+  typewrite(content, () => stampSeal(time, contact));
+};
+function stampSeal(time, contact) {
+  $('stamp').querySelector('.stamp-inner').innerHTML = `<b>${esc(time)}</b><span>${esc(contact)}</span>`;
+  $('stamp').classList.add('stamped');
+  setTimeout(foldToEnvelope, 950);
+}
+function foldToEnvelope() {
+  $('letter').classList.add('folded');
+  setTimeout(() => {
+    $('letter').style.display = 'none';
+    $('envelope2').style.display = 'flex';
+    const z = ZONE_BY_ID[draft.zone];
+    $('env-zone').textContent = (z ? z.name : '') + ' · ' + (draft.type === 'offer' ? '我能教' : (draft.type === 'team' ? '我要组队' : '我想学'));
+    $('env-zone').style.color = z ? z.theme : '#fff';
+    draft.keywords = extractKeywords(draft.content, draft.zone).slice(0, 6);
+    if (!draft.keywords.length) draft.keywords = ['搭子'];
+    renderEnvKeywords();
+  }, 820);
+}
+function renderEnvKeywords() {
+  const box = $('env-keywords'); box.innerHTML = '';
+  (draft.keywords || []).forEach(k => {
+    const c = document.createElement('span'); c.className = 'kchip';
+    const t = document.createElement('span'); t.textContent = k;
+    const x = document.createElement('i'); x.textContent = '✕';
+    x.onclick = () => { draft.keywords = draft.keywords.filter(v => v !== k); renderEnvKeywords(); };
+    c.appendChild(t); c.appendChild(x); box.appendChild(c);
+  });
+  const add = document.createElement('input');
+  add.placeholder = '+ 加关键词';
+  add.onkeydown = e => { if (e.key === 'Enter' && add.value.trim()) { draft.keywords.push(add.value.trim()); add.value = ''; renderEnvKeywords(); } };
+  box.appendChild(add);
+}
+$('btn-back').onclick = () => {
+  $('envelope2').style.display = 'none';
+  $('letter').style.display = 'block';
+  $('letter').classList.remove('folded');
+  $('letter-form').style.display = 'block';
+  $('typewriter').style.display = 'none';
+  $('stamp').classList.remove('stamped');
+};
+$('btn-send').onclick = () => {
+  const letter = addLetter({ zone: draft.zone, type: draft.type, content: draft.content, time: draft.time, contact: draft.contact, keywords: draft.keywords });
+  $('compose').style.display = 'none';
+  toast('已投递到中央广场 📮');
+  refreshStats();          // 帖数 +1，侧栏立刻更新
+  launchEnvelope(letter);
+};
+
+// 信封左右跳进中央广场（沙盘逐渐显出）→ 抵达中心 → 消失
+// 信封整体透明度：材质 + CSS2D 标签一起淡（用于"慢慢消失"）
+function setEnvOpacity(env, o) {
+  env.traverse(n => {
+    if (!n.material) return;
+    const ms = Array.isArray(n.material) ? n.material : [n.material];
+    ms.forEach(m => { m.transparent = true; m.opacity = o; m.depthWrite = o > 0.98; });
+  });
+  if (env.userData.labelDiv) env.userData.labelDiv.style.opacity = String(o);
+}
+
+// 投递动画：拉远景 → 绕场一周 → 盘旋收进中央广场 → 在中心慢慢消失
+// 四个阶段串成一个连续镜头。之前全程只是一个 2.6s 的直线抛物线，而且因为
+// addTween 的时长单位错了（见上），实际上第一帧就结束 —— 所以"信封动画没出现"。
+let envFlying = false;
+function launchEnvelope(ltr) {
+  if (envFlying) return;
+  envFlying = true;
+  const z = ZONE_BY_ID[ltr.zone];
+  const env = makeEnvelopeMesh(ltr, z, true);
+  env.scale.setScalar(1.9);
+
+  // 起点：镜头正前方，衔接"信纸刚折进信封"的位置
+  const fwd = new THREE.Vector3();
+  camera.getWorldDirection(fwd);
+  const start = camera.position.clone().add(fwd.multiplyScalar(15)).add(new THREE.Vector3(0, -1.5, 0));
+  env.position.copy(start);
+  scene.add(env);
+  setEnvOpacity(env, 1);
+
+  // 绕场圆的起始角：从镜头这一侧起飞
+  const a0 = Math.atan2(start.z, start.x);
+  const R_FLY = 82, TURNS_CIRCLE = 1, TURNS_SPIRAL = 2.4;
+
+  const p0 = camera.position.clone(), t0 = controls.target.clone();
+  const camWide = new THREE.Vector3(0, 104, 152), tgtWide = new THREE.Vector3(0, 6, 0);
+  const PRE = 0.7, CIRC = 2.6, SPIR = 2.0, FADE = 1.2;
+
+  controls.enabled = false;
+
+  // ① 先拉远到俯瞰全景（不然看不到"绕场"），沙盘同时由 0.82 放大到 1（沙盘渐显）
+  addTween(k => {
+    const e = easeInOut(k);
+    camera.position.lerpVectors(p0, camWide, e);
+    controls.target.lerpVectors(t0, tgtWide, e);
+    const s = 0.82 + 0.18 * e;
+    if (model) model.scale.setScalar(s);
+    if (rooms) rooms.scale.setScalar(s);
+
+    // 起飞阶段先在镜头前抬起来一点
+    env.position.lerpVectors(start, new THREE.Vector3(
+      Math.cos(a0) * R_FLY, 26, Math.sin(a0) * R_FLY), e);
+    env.rotation.y += 0.12;
+    return k >= 1;
+  }, PRE, () => {
+
+    // ② 绕场整整一周：半径带轻微起伏，机身侧倾压弯
+    addTween(k => {
+      const a = a0 + k * TURNS_CIRCLE * Math.PI * 2;
+      const r = R_FLY + Math.sin(a * 3) * 3.5;
+      env.position.set(Math.cos(a) * r, 26 - 9 * easeInOut(k) + Math.sin(a * 2) * 2.4, Math.sin(a) * r);
+      env.rotation.y += 0.17;
+      env.rotation.z = -0.34;                                  // 侧倾，像真的在转弯
+      env.rotation.x = Math.sin(a * 2) * 0.10;
+      return k >= 1;
+    }, CIRC, () => {
+
+      // ③ 盘旋收进广场中心：半径收到 0，高度落到广场上方，越收转得越快
+      const y0 = env.position.y;
+      addTween(k => {
+        const e = easeInOut(k);
+        const a = a0 + (TURNS_CIRCLE + k * TURNS_SPIRAL) * Math.PI * 2;
+        const r = R_FLY * (1 - e);
+        env.position.set(Math.cos(a) * r, y0 + (1.4 - y0) * e, Math.sin(a) * r);
+        env.rotation.y += 0.24 + 0.55 * k;
+        env.rotation.z = -0.34 * (1 - e) + Math.sin(k * Math.PI * 4) * 0.12 * (1 - k);
+        env.rotation.x = Math.sin(k * Math.PI * 3) * 0.12 * (1 - k);
+        return k >= 1;
+      }, SPIR, () => {
+
+        // ④ 停在广场正中：轻轻弹一下 → 缩小 + 淡出（慢慢消失）
+        addTween(k => {
+          const e = easeInOut(k);
+          env.position.y = 1.4 + Math.abs(Math.sin(k * Math.PI * 2)) * 0.3 * (1 - k);
+          env.scale.setScalar(Math.max(0.02, 1.9 * (1 - e * 0.97)));
+          env.rotation.y += 0.08;
+          setEnvOpacity(env, Math.max(0, 1 - e * 1.05));
+          return k >= 1;
+        }, FADE, () => {
+          scene.remove(env); disposeEnv(env);
+          controls.enabled = true; envFlying = false;
+        });
+      });
+    });
+  });
+}
+
+// ---------- 3D 信封墙浏览 ----------
+const browse = { active:false, stacks:[], current:null, index:0, focusEnv:null, stackOpen:false };
+
+// 中央广场标记：地面光圈 + 悬浮信箱标签
+const plazaRing = new THREE.Mesh(
+  new THREE.TorusGeometry(8, 0.28, 8, 64),
+  new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0.45 })
+);
+plazaRing.rotation.x = Math.PI / 2;
+plazaRing.position.y = 0.4;
+// 与中央广场一起降亮 50%（MeshBasicMaterial 的观感亮度 ≈ color × opacity）
+plazaRing.material.color.multiplyScalar(PLAZA_DIM);
+scene.add(plazaRing);
+const plazaDiv = document.createElement('div');
+plazaDiv.className = 'plaza-label';
+plazaDiv.innerHTML = '<b>📮 信封墙</b><span>点开翻看</span>';
+plazaDiv.onclick = () => enterBrowse();
+const plazaLabel = new CSS2DObject(plazaDiv);
+plazaLabel.position.set(0, 7.5, 0);
+scene.add(plazaLabel);
+
+function pickFirst(ev, obj) {
+  const rect = canvas.getBoundingClientRect();
+  pointer.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  return raycaster.intersectObject(obj, true).length > 0;
+}
+
+function buildEnvelopeStacks() {
+  clearStacks();
+  const byZone = {};
+  getLetters().forEach(l => { (byZone[l.zone] = byZone[l.zone] || []).push(l); });
+  ZONES.forEach(z => {
+    const list = byZone[z.id];
+    if (!list || !list.length) return;
+    const [x, , zc] = zoneXY(z, 17);
+    const stack = new THREE.Group();
+    stack.position.set(x, 0.3, zc);
+    list.slice(0, 5).forEach((l, i) => {
+      const m = makeEnvelopeMesh(l, z, false);
+      m.position.y = i * 0.18;
+      m.position.x = (i % 2 ? 0.16 : -0.12);
+      m.rotation.y = (i % 2 ? 0.06 : -0.06);
+      stack.add(m);
+    });
+    stack.userData = { zone: z, letters: list };
+    scene.add(stack);
+    browse.stacks.push(stack);
+    const div = document.createElement('div');
+    div.className = 'stack-label';
+    div.innerHTML = `${ZONE_ICON[z.id] || '📮'} ${z.name} · ${list.length} 封`;
+    div.style.color = z.theme;
+    div.onclick = () => openStack(stack);
+    const lab = new CSS2DObject(div);
+    lab.position.set(x, 3.0, zc);
+    scene.add(lab);
+    stack.userData.label = lab;
+  });
+}
+function clearStacks() {
+  browse.stacks.forEach(s => {
+    // 这枚标签是直接 scene.add 的（不在 stack 组里），必须单独摘掉它的 DOM，否则退出后残留在画面上
+    if (s.userData.label) { scene.remove(s.userData.label); disposeEnv(s.userData.label); }
+    scene.remove(s); disposeEnv(s);
+  });
+  browse.stacks = [];
+  if (browse.focusEnv) { scene.remove(browse.focusEnv); disposeEnv(browse.focusEnv); browse.focusEnv = null; }
+}
+
+function enterBrowse() {
+  if (browse.active) return;
+  const letters = getLetters();
+  if (!letters.length) { toast('还没有信封，先点侧栏「发布搭子帖」写一封吧'); return; }
+  browse.active = true;
+  syncAiFriend();          // 浏览态下隐藏左下角 AI 浮窗，避免与「返回全景」按钮挤在一起
+  buildEnvelopeStacks();
+  $('browse-hud').style.display = 'block';
+  $('btn-exit-browse').style.display = 'inline-block';
+  syncBrowseBtn();
+  $('bh-title').textContent = `📮 信封墙 · ${letters.length} 封搭子帖`;
+  $('bh-hint').textContent = '点一沓信封 → 镜头推进；左滑下一封 · 右滑上一封 · 点开看详情';
+  $('bh-sub').textContent = '';
+  controls.enabled = false;
+  flyCamera(new THREE.Vector3(0, 78, 108), new THREE.Vector3(0, 2, 0), 1.1, () => { controls.enabled = true; });
+}
+function exitBrowse() {
+  browse.active = false; browse.stackOpen = false; browse.current = null; browse.index = 0;
+  syncAiFriend();          // 退出浏览态后恢复显示左下角 AI 浮窗
+  clearStacks();
+  $('browse-hud').style.display = 'none';
+  $('btn-exit-browse').style.display = 'none';
+  controls.enabled = false;
+  flyCamera(new THREE.Vector3(0, 94, 132), new THREE.Vector3(0, 0, 0), 1.0, () => { controls.enabled = true; });
+}
+// 左下角按钮随层级切换文案：在某一沓信封里 → 返回信封墙；在信封墙总览 → 返回全景
+function syncBrowseBtn() {
+  const btn = $('btn-exit-browse');
+  if (!browse.active) return;
+  btn.textContent = browse.stackOpen ? '← 返回信封墙' : '← 返回全景';
+}
+// 从「某一沓信封」退回「信封墙总览」（不退出浏览态）
+function backToWall() {
+  browse.stackOpen = false; browse.current = null; browse.index = 0;
+  if (browse.focusEnv) { scene.remove(browse.focusEnv); disposeEnv(browse.focusEnv); browse.focusEnv = null; }
+  controls.enabled = false;
+  flyCamera(new THREE.Vector3(0, 78, 108), new THREE.Vector3(0, 2, 0), 1.0, () => { controls.enabled = true; });
+  $('bh-hint').textContent = '点一沓信封 → 镜头推进；左滑下一封 · 右滑上一封 · 点开看详情';
+  $('bh-sub').textContent = '';
+  syncBrowseBtn();
+}
+$('btn-exit-browse').onclick = () => {
+  if (browse.stackOpen) backToWall();   // 第一层：回到信封墙
+  else exitBrowse();                    // 第二层：退出信封墙，回到全景
+};
+
+function openStack(stack) {
+  if (browse.stackOpen && browse.current === stack) return;
+  browse.current = stack; browse.index = 0; browse.stackOpen = true;
+  controls.enabled = false;
+  showFocusEnvelope();
+  const [x, , zc] = zoneXY(stack.userData.zone, 17);
+  flyCamera(new THREE.Vector3(x + 8, 9, zc + 13), new THREE.Vector3(x, 2, zc), 1.0);
+  updateSub();
+  $('bh-hint').textContent = '← 左滑下一封 · 右滑上一封 → · 点信封看详情';
+  syncBrowseBtn();
+}
+function showFocusEnvelope() {
+  const stack = browse.current;
+  if (!stack) return;
+  if (browse.focusEnv) { scene.remove(browse.focusEnv); disposeEnv(browse.focusEnv); }
+  const ltr = stack.userData.letters[browse.index];
+  const z = stack.userData.zone;
+  const [x, , zc] = zoneXY(z, 17);
+  const m = makeEnvelopeMesh(ltr, z, true);
+  m.position.set(x, 2.3, zc);
+  m.scale.setScalar(1.9);
+  scene.add(m);
+  m.userData.labelDiv.onclick = () => openLetterDetail();
+  m.userData.labelDiv.style.cursor = 'pointer';
+  browse.focusEnv = m;
+}
+function updateSub() {
+  const stack = browse.current;
+  if (!stack) return;
+  $('bh-sub').textContent = `${stack.userData.zone.name} · 第 ${browse.index + 1}/${stack.userData.letters.length} 封`;
+}
+function flipEnvelope(dir) {
+  const stack = browse.current;
+  if (!stack) return;
+  const n = stack.userData.letters.length;
+  const env = browse.focusEnv;
+  const outY = dir > 0 ? -Math.PI / 2 : Math.PI / 2;
+  addTween(k => { env.rotation.y = outY * ease(k); return k >= 1; }, 0.32, () => {
+    browse.index = (browse.index + dir + n) % n;
+    showFocusEnvelope();
+    const e2 = browse.focusEnv;
+    const inY = dir > 0 ? Math.PI / 2 : -Math.PI / 2;
+    e2.rotation.y = inY;
+    addTween(k2 => { e2.rotation.y = inY * (1 - ease(k2)); return k2 >= 1; }, 0.32);
+    updateSub();
+  });
+}
+// ---------- 详情弹层：左右箭头翻下一封 ----------
+// 列表来源：优先当前"沓"（与该区 3D 聚焦信封联动）；没有沓时退化为全部信封。
+const detail = { list: [], index: 0 };
+function openLetterDetail() {
+  const stack = browse.current;
+  if (stack && stack.userData.letters && stack.userData.letters.length) {
+    detail.list = stack.userData.letters;
+    detail.index = Math.min(browse.index, detail.list.length - 1);
+  } else {
+    detail.list = getLetters();
+    detail.index = 0;
+  }
+  renderLetterDetail();
+  $('letterview').style.display = 'flex';
+}
+function renderLetterDetail() {
+  const ltr = detail.list[detail.index];
+  if (!ltr) return;
+  const z = ZONE_BY_ID[ltr.zone] || null;
+  const n = detail.list.length;
+  $('lv-count').textContent = n > 1
+    ? `${z ? z.name + ' · ' : ''}第 ${detail.index + 1} / ${n} 封　（← → 翻页）`
+    : '仅此一封';
+  $('lv-type').textContent = (ltr.type === 'offer' ? '我能教' : (ltr.type === 'team' ? '我要组队' : '我想学')) + ' · ' + (z ? z.name : '');
+  $('lv-type').style.color = z ? z.theme : '#fff';
+  $('lv-content').textContent = ltr.content;
+  $('lv-keywords').innerHTML = (ltr.keywords || []).map(k => `<span class="tag">${esc(k)}</span>`).join('');
+  $('lv-meta').textContent = `🕐 ${ltr.time || '时间待定'}　·　✉ ${ltr.contact || '未留联系方式'}`;
+  $('lv-stamp').querySelector('.stamp-inner').innerHTML =
+    `<b>${esc(ltr.time || '时间')}</b><span>${esc(ltr.contact || '联系方式')}</span>`;
+  const only = n <= 1;
+  $('lv-prev').disabled = only;
+  $('lv-next').disabled = only;
+}
+function stepLetterDetail(dir) {
+  const n = detail.list.length;
+  if (n <= 1) return;
+  detail.index = (detail.index + dir + n) % n;
+  // 与 3D 场景同步：镜头前的那封也跟着换，返回信封墙时位置一致
+  const stack = browse.current;
+  if (stack && detail.list === stack.userData.letters) {
+    browse.index = detail.index;
+    if (browse.stackOpen) showFocusEnvelope();
+    updateSub();
+  }
+  renderLetterDetail();
+  const card = $('lv-card');
+  if (card) {
+    card.classList.remove('slide-l', 'slide-r');
+    void card.offsetWidth;
+    card.classList.add(dir > 0 ? 'slide-l' : 'slide-r');
+  }
+}
+$('lv-prev').onclick = () => stepLetterDetail(-1);
+$('lv-next').onclick = () => stepLetterDetail(1);
+document.addEventListener('keydown', e => {
+  if ($('letterview').style.display !== 'flex') return;
+  if (e.key === 'ArrowLeft') { e.preventDefault(); stepLetterDetail(-1); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); stepLetterDetail(1); }
+});
+
+// 覆盖层关闭（backdrop / 取消 / 返回）
+document.querySelectorAll('.overlay [data-close]').forEach(el => {
+  el.onclick = () => { el.closest('.overlay').style.display = 'none'; };
+});
+
+// ---------- 页面左下角 · AI 寻友助手 ----------
+const afEl = $('ai-friend');
+const afPanel = $('ai-friend-panel');
+const afToggle = $('ai-friend-toggle');
+const afReply = $('af-reply');
+const afInput = $('af-q');
+// 展开时藏起 🤖 气泡，收起时露出气泡
+function setAfPanel(open) {
+  afPanel.classList.toggle('show', open);
+  afToggle.style.display = open ? 'none' : 'block';
+}
+setAfPanel(true);                     // 默认展开 → 进沙盘一眼就能看到 AI 提问框
+afToggle.onclick = () => setAfPanel(true);
+$('af-close').onclick = () => setAfPanel(false);
+// 浏览态（信封墙）时整块隐藏，避免与左下角「返回沙盘」按钮挤在一起
+function syncAiFriend() { afEl.style.display = browse.active ? 'none' : 'block'; }
+
+// ---------- AI 设置：接入真实大模型 ----------
+const aiStatus = $('ai-status');
+const aiSetup = $('af-setup');
+const aiMsg = $('ai-setup-msg');
+function refreshAiStatus() {
+  const on = aiConfigured();
+  aiStatus.classList.toggle('on', on);
+  aiStatus.classList.toggle('off', !on);
+  aiStatus.textContent = on ? 'AI 已接入' : '未接入';
+}
+function readAiForm() {
+  return {
+    endpoint: $('ai-endpoint').value.trim() || null,
+    model: $('ai-model').value.trim() || null,
+    apiKey: $('ai-key').value.trim() || null,
+  };
+}
+(function initAiForm() {
+  const c = getAI();
+  if (c.endpoint) $('ai-endpoint').value = c.endpoint;
+  if (c.model) $('ai-model').value = c.model;
+  if (c.apiKey) $('ai-key').value = c.apiKey;
+  refreshAiStatus();
+})();
+$('af-gear').onclick = () => aiSetup.classList.toggle('show');
+$('ai-save').onclick = () => {
+  setAI(readAiForm());
+  refreshAiStatus();
+  aiMsg.className = 'af-setup-msg ok';
+  aiMsg.textContent = aiConfigured() ? '已保存并启用，现在提问会走真实大模型。' : '已清空配置，回到本地匹配模式。';
+};
+$('ai-test').onclick = async () => {
+  setAI(readAiForm());
+  refreshAiStatus();
+  aiMsg.className = 'af-setup-msg';
+  aiMsg.textContent = '正在测试连接…';
+  const r = await testAI();
+  aiMsg.className = 'af-setup-msg ' + (r.ok ? 'ok' : 'err');
+  aiMsg.textContent = r.msg;
+};
+
+async function askFriend() {
+  const q = afInput.value.trim();
+  if (!q) { afInput.focus(); return; }
+  afEl.classList.add('thinking');
+  afReply.innerHTML = '<span style="color:var(--muted)">'
+    + (aiConfigured() ? '🤖 AI 正在理解你的问题，并检索社区内容…' : '正在检索站内内容…（未接入大模型）')
+    + '</span>';
+  let res;
+  try { res = await aiFindFriends(q); }
+  catch (e) { res = { ok: false, summary: 'AI 暂时没回应，稍后再试', matches: [], keywords: [], zones: [] }; }
+  afEl.classList.remove('thinking');
+  renderFriendReply(res);
+}
+function renderFriendReply(res) {
+  if (!res.ok) { afReply.textContent = res.summary; return; }
+  // 标注回答来源：真实大模型生成 / 本地匹配兜底（失败时带上具体原因）
+  const reason = res.aiError ? `：${esc(String(res.aiError).slice(0, 120))}` : '';
+  const badge = res.ai
+    ? '<span class="ai-badge on">🤖 由大模型生成</span>'
+    : (res.configured
+      ? `<span class="ai-badge off">⚠ 大模型调用失败${reason}，已用本地匹配</span>`
+      : '<span class="ai-badge off">本地匹配（未接入大模型，点右上角 ⚙️ 配置）</span>');
+  let html = badge + `<div style="white-space:pre-wrap">${esc(res.summary)}</div>`;
+  if (res.matches.length) {
+    html += '<div style="font-size:11px;color:var(--muted);margin:8px 0 2px">点信封看搭子帖详情：</div>';
+    html += res.matches.map((l, i) => {
+      const z = ZONE_BY_ID[l.zone];
+      return `<span class="af-env" data-i="${i}">📨 ${esc(z ? z.name : '搭子帖')}</span>`;
+    }).join('');
+  }
+  if (res.matchedPosts && res.matchedPosts.length) {
+    html += '<div style="font-size:11px;color:var(--muted);margin:8px 0 2px">相关技能帖：</div>';
+    html += res.matchedPosts.slice(0, 3).map(p => {
+      const z = ZONE_BY_ID[p.zone];
+      return `<a class="af-env" href="./skills.html" style="text-decoration:none">📢 ${esc(p.title)}</a>`;
+    }).join('');
+  }
+  if (res.matchedUsers && res.matchedUsers.length) {
+    html += '<div style="font-size:11px;color:var(--muted);margin:8px 0 2px">相关伙伴：</div>';
+    html += res.matchedUsers.map(u => {
+      return `<a class="af-env" href="./skills.html?zone=${u.zones && u.zones[0] ? u.zones[0] : ''}" style="text-decoration:none">${faceHTML(u.face)} ${esc(u.name)}</a>`;
+    }).join('');
+  }
+  const prm = new URLSearchParams();
+  if (res.keywords.length) prm.set('kw', res.keywords.join(' '));
+  if (res.zones.length) prm.set('zone', String(res.zones[0]));
+  const qs = prm.toString();
+  html += `<a class="af-link" href="./skills.html?envelopes=1${qs ? '&' + qs : ''}">📮 查看信封墙（${res.matches.length} 封）▸</a>`;
+  afReply.innerHTML = html;
+  afReply.querySelectorAll('.af-env[data-i]').forEach(el => {
+    el.onclick = () => {
+      const i = Number(el.dataset.i);
+      detail.list = res.matches; detail.index = i;
+      renderLetterDetail();
+      $('letterview').style.display = 'flex';
+    };
+  });
+}
+$('af-send').onclick = askFriend;
+afInput.addEventListener('keydown', e => { if (e.key === 'Enter') askFriend(); });
+syncAiFriend();
+
+// ---------- 点击与滑动分派 ----------
+canvas.addEventListener('pointerdown', e => { downXY = [e.clientX, e.clientY]; });
+canvas.addEventListener('pointerup', e => {
+  if (!downXY) return;
+  const dx = e.clientX - downXY[0], dy = e.clientY - downXY[1];
+  downXY = null;
+  // 浏览态：左右滑动翻信封
+  if (browse.stackOpen) {
+    if (Math.abs(dx) > 44 && Math.abs(dx) > Math.abs(dy) * 1.4) { flipEnvelope(dx < 0 ? 1 : -1); return; }
+    return;   // 点开详情由信封标签的 onclick 处理
+  }
+  if (Math.hypot(dx, dy) > 6) return;      // 拖拽旋转
+  if (pickFirst(e, plazaRing)) { enterBrowse(); return; }
+  if (browse.active) return;               // 浏览态下不跳转建筑
+  const zid = pickBuilding(e);
+  if (zid !== null) drillInto(zid);
+});
+// 悬停：广场/建筑 → 手型
+canvas.addEventListener('pointermove', e => {
+  if (!rooms) return;
+  if (pickFirst(e, plazaRing)) { canvas.style.cursor = 'pointer'; return; }
+  canvas.style.cursor = (pickBuilding(e) !== null) ? 'pointer' : 'default';
+});
+
+// ---------- 控件 ----------
+document.querySelectorAll('[data-t]').forEach(btn => btn.onclick = () => {
+  document.querySelectorAll('[data-t]').forEach(x => x.classList.remove('on'));
+  btn.classList.add('on'); timeMode = btn.dataset.t; applyState();
+});
+document.querySelectorAll('[data-w]').forEach(btn => btn.onclick = () => {
+  document.querySelectorAll('[data-w]').forEach(x => x.classList.remove('on'));
+  btn.classList.add('on'); weather = btn.dataset.w; applyState();
+});
+
+// ---------- 时钟 ----------
+function tickClock() { const d = new Date(); const p = n => String(n).padStart(2,'0');
+  document.getElementById('clock').textContent = `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; }
+setInterval(tickClock, 1000); tickClock();
+
+// ---------- 循环 ----------
+function moveParticles(pts) {
+  if (!pts.visible) return;
+  const pos = pts.geometry.attributes.position, sp = pts.userData.speed;
+  for (let i = 0; i < pts.userData.n; i++) { let y = pos.array[i*3+1] - sp; if (y < 0) y = 150; pos.array[i*3+1] = y; }
+  pos.needsUpdate = true;
+}
+const clock = new THREE.Clock();
+function animate() {
+  const t = clock.getElapsedTime();
+  const nowMs = performance.now();
+  for (let i = tweens.length - 1; i >= 0; i--) {
+    const tw = tweens[i];
+    const k = Math.min(1, (nowMs - tw.start) / tw.dur);
+    if (tw.fn(k, nowMs)) { if (tw.onDone) tw.onDone(); tweens.splice(i, 1); }
+  }
+  for (const b of beacons) { const r = b.userData.ring; r.scale.setScalar(1 + 0.14*Math.sin(t*3)); r.rotation.z += 0.01; }
+  moveParticles(rain); moveParticles(snow);
+  controls.update();
+  renderPipeline();
+  labelRenderer.render(scene, camera);
+  requestAnimationFrame(animate);
+}
+function resize() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (canvas.width !== w || canvas.height !== h) {
+    renderer.setSize(w, h, false); labelRenderer.setSize(w, h);
+    camera.aspect = w / h; camera.updateProjectionMatrix();
+  }
+  if (bloomComposer) bloomComposer.setSize(canvas.clientWidth || 1, canvas.clientHeight || 1);
+  if (finalComposer) finalComposer.setSize(canvas.clientWidth || 1, canvas.clientHeight || 1);
+}
+window.addEventListener('resize', resize);
+resize(); animate(); applyState();
+
+// ---------- 进入沙盘：镜头从远（小）推进到默认位（大） ----------
+// 进入页面先停在高空远景观，再用 easeInOut 缓缓推近到 (0,94,132)，约 2.6s；
+// 推进期间禁用 OrbitControls，结束后恢复，避免和拖拽抢镜头。
+// 注意：OrbitControls.update() 每帧都会把相机距离夹到 [minDistance,maxDistance]，
+// 起点距离（约 588）超过默认 maxDistance(420) 会被瞬间夹回，所以推进期间临时放开上限。
+controls.enabled = false;
+controls.maxDistance = 760;
+(function introPushIn() {
+  const p0 = camera.position.clone();
+  const t0 = controls.target.clone();
+  const p1 = new THREE.Vector3(0, 94, 132);
+  const t1 = new THREE.Vector3(0, 0, 0);
+  addTween(k => {
+    const e = easeInOut(k);
+    camera.position.lerpVectors(p0, p1, e);
+    controls.target.lerpVectors(t0, t1, e);
+    if (k >= 1) { controls.enabled = true; controls.maxDistance = 420; return true; }
+    return false;
+  }, 2.6);
+})();
+</script>
+</body>
+</html>

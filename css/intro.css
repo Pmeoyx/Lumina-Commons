@@ -1,0 +1,220 @@
+/* ================= 首页 · 电影卡片布局 ================= */
+/* 布局：同画面模糊放大铺底（氛围）＋ 清晰视频卡片居中（≈70%，圆角描边）
+   ＋ 顶栏（毛玻璃）＋ 品牌字（开场淡出）＋ 冰块按钮「进入首页」＋ 底栏（米黄实底）。 */
+
+#intro{
+  position:fixed; inset:0; z-index:300; overflow:hidden;
+  background:#e9f2e4;
+  transition:opacity .62s ease, visibility .62s;
+}
+/* 铺底层：同一视频模糊放大，只做氛围（始终静音） */
+#ivblur{
+  position:absolute; inset:0; z-index:0;
+  width:100%; height:100%;
+  object-fit:cover; object-position:center;
+  filter:blur(26px) saturate(1.12) brightness(.86);
+  transform:scale(1.08);                 /* 放大一点，遮住模糊后的边缘发虚 */
+  pointer-events:none;
+}
+/* 主视频卡片：居中，16:9，宽不超过 86vw / 高不超过 72vh */
+#ivmain{
+  position:absolute; left:50%; top:47%; z-index:2;
+  transform:translate(-50%,-50%);
+  width:min(86vw, 128vh);                /* 128vh ≈ 72vh × 16/9，保证高度不越界 */
+  aspect-ratio:16/9;
+  border-radius:20px;
+  border:1.5px solid rgba(255,255,255,.55);
+  box-shadow:0 30px 80px rgba(45,55,35,.42), 0 6px 22px rgba(45,55,35,.25);
+  object-fit:cover; object-position:center;
+  background:#e9f2e4;
+}
+/* 压暗渐变只作用在铺底层（z1 < 卡片 z2）：卡片保持通透明亮 */
+#intro::after{
+  content:''; position:absolute; inset:0; z-index:1; pointer-events:none;
+  background:linear-gradient(180deg, rgba(28,20,10,.20), rgba(28,20,10,0) 30%,
+             rgba(28,20,10,0) 72%, rgba(28,20,10,.22));
+}
+#intro.done{ opacity:0; visibility:hidden; pointer-events:none }
+
+/* ---------- 毛玻璃通用 ---------- */
+.glass,
+.itop{
+  background:linear-gradient(160deg, rgba(252,247,235,.82), rgba(245,233,206,.66));
+  backdrop-filter:blur(16px) saturate(1.35);
+  -webkit-backdrop-filter:blur(16px) saturate(1.35);
+  border:1.5px solid rgba(91,70,54,.42);
+  box-shadow:0 12px 34px rgba(70,52,28,.30), inset 0 1px 0 rgba(255,255,255,.7);
+}
+
+/* ---------- 顶栏：悬浮圆角毛玻璃 ---------- */
+.itop{
+  position:absolute; top:14px; left:18px; right:18px; height:60px; z-index:6;
+  display:flex; align-items:center; gap:18px; padding:0 20px;
+  border-radius:18px;
+}
+.itop-brand{ display:flex; align-items:center; gap:10px; min-width:0 }
+.itop-logo{
+  width:34px; height:34px; border-radius:11px; display:grid; place-items:center;
+  font-size:16px; color:#7a5a20;
+  background:linear-gradient(150deg,#ffe9b8,#f5c96a);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.8), 0 3px 10px rgba(160,120,40,.3);
+}
+.itop-name{
+  font-size:17px; font-weight:700; letter-spacing:3px; color:#5b4636; white-space:nowrap;
+}
+.itop-name em{
+  display:block; font-style:normal; font-size:9.5px; font-weight:600;
+  letter-spacing:4px; color:rgba(91,70,54,.55); margin-top:1px;
+}
+.itop-hello{
+  margin-left:auto; font-size:13px; letter-spacing:2px; color:rgba(91,70,54,.8);
+}
+.itop-ops{ display:flex; align-items:center; gap:10px }
+
+/* 声音开关（顶栏内圆形） */
+#isound{
+  width:38px; height:38px; border-radius:50%; cursor:pointer; font-size:15px; line-height:1;
+  color:#6b5236; border:1.3px solid rgba(255,255,255,.65);
+  background:linear-gradient(157deg,rgba(255,255,255,.5),rgba(250,238,210,.3));
+  box-shadow:inset 0 1.2px 0 rgba(255,255,255,.85), 0 6px 16px rgba(120,90,40,.2);
+  transition:transform .25s ease, box-shadow .25s ease;
+}
+#isound:hover{ transform:scale(1.07) }
+#isound.off{ background:linear-gradient(157deg,#ffe9b8,#f5c96a) }
+
+/* ---------- 品牌字：浮在视频上方，开场出现、按钮出现时淡出 ---------- */
+#ititle{
+  position:absolute; left:50%; top:38%; transform:translate(-50%,-50%);
+  text-align:center; pointer-events:none; opacity:0; z-index:3;
+  transition:opacity 1.1s ease .35s, transform 1.1s ease .35s;
+}
+#ititle.show{ opacity:1 }
+#ititle.hide{ opacity:0; transform:translate(-50%,-52%) }
+#ititle b{
+  display:block; font-size:30px; letter-spacing:12px; font-weight:700;
+  color:#fff; text-shadow:0 2px 18px rgba(60,50,30,.65), 0 0 34px rgba(255,240,210,.45);
+}
+#ititle span{
+  display:block; margin-top:10px; font-size:10.5px; letter-spacing:7px;
+  color:rgba(255,255,255,.88); text-shadow:0 1px 10px rgba(60,50,30,.6);
+}
+
+/* ---------- 冰块按钮「进入首页」（约 3s 浮现，底部居中） ---------- */
+#ienter{
+  position:absolute; left:50%; z-index:5;
+  top:auto; bottom:92px;                /* 底栏(14+56)之上留 22px */
+  padding:19px 62px; border-radius:22px; cursor:pointer;
+  font-family:inherit; font-size:19px; letter-spacing:5px; font-weight:600;
+  color:#eaf7ff; text-shadow:0 1px 6px rgba(80,150,210,.55);
+  border:1.6px solid rgba(255,255,255,.72);
+  background:
+    linear-gradient(157deg,
+      rgba(255,255,255,.50) 0%,
+      rgba(190,228,255,.20) 26%,
+      rgba(226,244,255,.13) 52%,
+      rgba(168,216,250,.24) 78%,
+      rgba(255,255,255,.38) 100%);
+  backdrop-filter:blur(11px) saturate(1.32);
+  -webkit-backdrop-filter:blur(11px) saturate(1.32);
+  box-shadow:
+    inset 0 1.4px 0 rgba(255,255,255,.95),
+    inset 0 -11px 20px -6px rgba(150,210,255,.45),
+    inset 9px 0 22px -8px rgba(255,255,255,.42),
+    inset -9px 0 22px -8px rgba(190,232,255,.36),
+    0 14px 38px rgba(30,80,150,.42),
+    0 2px 0 rgba(255,255,255,.22),
+    0 0 26px rgba(150,205,255,.30);
+  transform:translate(-50%,26px) scale(.9); opacity:0;
+  transition:transform .95s cubic-bezier(.2,.9,.3,1), opacity .75s ease,
+             box-shadow .35s ease, letter-spacing .35s ease;
+}
+#ienter::before{           /* 冰面斜切高光 */
+  content:''; position:absolute; inset:2px; border-radius:19px; pointer-events:none;
+  background:linear-gradient(118deg,rgba(255,255,255,.42) 0 12%,transparent 12.6% 34%,
+    rgba(255,255,255,.26) 34.5% 43%,transparent 43.4% 100%);
+  mix-blend-mode:screen; opacity:.75;
+}
+#ienter::after{            /* 底部冰晶折射 */
+  content:''; position:absolute; left:12%; right:12%; bottom:3px; height:9px;
+  border-radius:9px; pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(210,240,255,.7),transparent);
+  filter:blur(3px);
+}
+#ienter.show{ transform:translate(-50%,0) scale(1); opacity:1;
+  animation:frost 4.2s ease-in-out infinite 1s; }
+@keyframes frost{
+  0%,100%{ box-shadow:
+    inset 0 1.4px 0 rgba(255,255,255,.95),
+    inset 0 -11px 20px -6px rgba(150,210,255,.45),
+    inset 9px 0 22px -8px rgba(255,255,255,.42),
+    inset -9px 0 22px -8px rgba(190,232,255,.36),
+    0 14px 38px rgba(30,80,150,.42), 0 2px 0 rgba(255,255,255,.22),
+    0 0 26px rgba(150,205,255,.30); }
+  50%{ box-shadow:
+    inset 0 1.4px 0 rgba(255,255,255,1),
+    inset 0 -13px 24px -6px rgba(168,222,255,.62),
+    inset 9px 0 24px -8px rgba(255,255,255,.55),
+    inset -9px 0 24px -8px rgba(205,240,255,.5),
+    0 16px 44px rgba(40,100,175,.5), 0 2px 0 rgba(255,255,255,.3),
+    0 0 40px rgba(170,218,255,.52); }
+}
+#ienter:hover{
+  letter-spacing:7px;
+  background:linear-gradient(157deg,
+    rgba(255,255,255,.62) 0%, rgba(205,238,255,.3) 26%,
+    rgba(238,250,255,.22) 52%, rgba(185,228,255,.34) 78%,
+    rgba(255,255,255,.5) 100%);
+}
+#ienter:active{ transform:translate(-50%,3px) scale(.975) }
+
+/* ---------- 底栏：悬浮圆角米黄 ---------- */
+.ibot{
+  position:absolute; left:18px; right:18px; bottom:14px; height:56px; z-index:6;
+  display:flex; align-items:center; padding:0 26px;
+  border-radius:18px;
+  background:linear-gradient(180deg,rgba(249,239,218,.96),rgba(244,230,198,.96));
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  border:1.5px solid rgba(91,70,54,.4);
+  box-shadow:0 12px 30px rgba(70,52,28,.32), inset 0 1px 0 rgba(255,255,255,.7);
+}
+.ibot-slogan{
+  font-size:14.5px; letter-spacing:3px; font-weight:600; color:#5b4636;
+}
+.ibot-slogan em{
+  font-style:normal; margin-left:14px; font-size:10.5px; font-weight:500;
+  letter-spacing:2px; color:rgba(91,70,54,.5);
+}
+
+/* 底部小提示：起播受阻 / 视频异常时出现 */
+#ihint{
+  position:absolute; left:50%; top:88px; transform:translateX(-50%); z-index:7;
+  font-size:11.5px; letter-spacing:3px; color:#fff;
+  text-shadow:0 1px 8px rgba(40,30,15,.75);
+  background:rgba(50,38,22,.45); padding:8px 18px; border-radius:99px;
+  backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  opacity:0; transition:opacity .8s ease; pointer-events:none;
+  white-space:nowrap;
+}
+#ihint.show{ opacity:1 }
+
+/* 跳到沙盘时的过场：整层往沙盘方向轻微推进 */
+#intro.leaving{ animation:leaving .62s ease forwards }
+@keyframes leaving{
+  0%{ opacity:1; transform:scale(1) }
+  100%{ opacity:0; transform:scale(1.045) }
+}
+
+/* ---------- 响应式 ---------- */
+@media (max-width:860px){
+  .itop-hello{ display:none }
+}
+@media (max-width:640px){
+  .itop-name{ font-size:15px }
+  #ivmain{ width:94vw; border-radius:14px }
+  #ienter{ padding:15px 40px; font-size:16px; letter-spacing:3px; bottom:84px }
+  #ititle b{ font-size:24px; letter-spacing:8px }
+  .ibot-slogan{ font-size:12px; letter-spacing:1.5px }
+  .ibot-slogan em{ display:none }
+  #ihint{ display:none }
+}

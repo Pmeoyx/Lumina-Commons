@@ -1,0 +1,21 @@
+# ===== 开发过程产物 / 会话记忆（不需要进仓库） =====
+.workbuddy/
+.chk/
+output/
+server.log
+*.log
+
+# Windows 保留设备名产生的空文件
+nul
+
+# 打包产物
+*.zip
+
+# Blender 自动备份（.blend 源文件保留，.blend1 是冗余自动备份）
+*.blend1
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

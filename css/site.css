@@ -1,0 +1,286 @@
+/* ============ 微光社区 Lumina Commons · 全站共享样式 ============ */
+
+/* 书法体（信封/信纸主题文字用）。
+   米芾是行书，系统一般没装「米芾体」，所以这里三级兜底：
+   ① local() 优先用本机已装的米芾体；② 项目内自带字体文件（放进 assets/fonts/ 即生效）；
+   ③ 最后回落到本机最接近的书法字「华文行楷 / 方正舒体」。
+   —— 拿到米芾体的 .woff2/.ttf 丢进 assets/fonts/ 命名为 mifu.* 即可精确使用。 */
+@font-face{
+  font-family:'MiFuTi';
+  src:local('米芾体'),local('FZMiFuTi'),local('MiFuTi'),
+      url('../assets/fonts/mifu.woff2') format('woff2'),
+      url('../assets/fonts/mifu.ttf') format('truetype');
+  font-display:swap;
+}
+
+:root{
+  --bg:#0b0a13;
+  --bg2:#14121e;
+  --panel:rgba(255,255,255,.06);
+  --panel-solid:#16142a;
+  --line:rgba(255,255,255,.10);
+  --accent:#ff7a5c;      /* 微光橙 */
+  --accent2:#5ce1e6;     /* 微光青 */
+  --text:#e9e9f2;
+  --muted:#8a8a9c;
+  --ok:#7CFC9B;
+  --warn:#ffd166;
+  --radius:14px;
+  --nav-h:56px;
+  /* 信封 / 信纸主题字体（米芾行书 → 华文行楷 → 方正舒体） */
+  --font-brush:'MiFuTi','米芾体','FZMiFuTi','汉仪米芾体','STXingkai','华文行楷','FZShuTi','方正舒体','KaiTi','STKaiti',serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:'Segoe UI','PingFang SC','Microsoft YaHei',system-ui,sans-serif;
+  color:var(--text);background:var(--bg);
+  background-image:radial-gradient(120% 120% at 70% 12%,#1a1530 0%,#0b0a13 58%);
+  min-height:100vh;
+}
+a{color:inherit;text-decoration:none}
+
+/* ---------- 顶部导航 ---------- */
+#topnav{position:sticky;top:0;z-index:50;height:var(--nav-h);
+  display:flex;align-items:center;gap:6px;padding:0 18px;
+  background:rgba(11,10,19,.72);backdrop-filter:blur(14px) saturate(1.2);
+  -webkit-backdrop-filter:blur(14px) saturate(1.2);
+  border-bottom:1px solid var(--line)}
+#topnav .brand{font-size:15px;font-weight:700;letter-spacing:.5px;margin-right:14px;white-space:nowrap}
+#topnav .brand b{color:var(--accent)}
+#topnav .brand i{color:var(--accent2);font-style:normal}
+#topnav .brand-light{color:#fff}      /* 社区名「微光」始终纯白 */
+#topnav a{font-size:13px;color:#fff;padding:7px 13px;border-radius:9px;transition:.15s}
+#topnav a:hover{color:#fff;background:rgba(255,255,255,.10)}
+#topnav a.active{color:#fff;background:linear-gradient(90deg,rgba(255,122,92,.22),rgba(92,225,230,.10));border:1px solid rgba(255,122,92,.35)}
+#topnav .spacer{flex:1}
+
+/* ---------- 通用容器 ---------- */
+.wrap{max-width:1180px;margin:0 auto;padding:34px 22px 60px}
+.page-title{font-size:26px;font-weight:700;letter-spacing:.5px}
+.page-sub{color:var(--muted);font-size:13px;margin-top:6px;line-height:1.7}
+.section-h{font-size:13px;letter-spacing:1px;color:var(--accent2);text-transform:uppercase;margin:30px 0 14px}
+
+/* ---------- 卡片 ---------- */
+.grid{display:grid;gap:18px}
+.grid.cols-3{grid-template-columns:repeat(3,1fr)}
+.grid.cols-2{grid-template-columns:repeat(2,1fr)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:20px;transition:.18s;position:relative;overflow:hidden}
+.card:hover{border-color:rgba(255,122,92,.4);transform:translateY(-2px)}
+.card .ico{font-size:26px;margin-bottom:10px}
+.card h3{font-size:17px;margin-bottom:8px}
+.card p{color:var(--muted);font-size:13px;line-height:1.7}
+.card .go{margin-top:14px;display:inline-block;font-size:13px;color:var(--accent);
+  border:1px solid rgba(255,122,92,.4);padding:7px 14px;border-radius:9px;transition:.15s}
+.card .go:hover{background:rgba(255,122,92,.14)}
+
+/* ---------- 按钮 ---------- */
+.btn{background:var(--panel);border:1px solid var(--line);color:var(--text);
+  padding:9px 16px;border-radius:10px;font-size:13px;cursor:pointer;transition:.15s}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:linear-gradient(90deg,rgba(255,122,92,.28),rgba(92,225,230,.14));
+  border-color:var(--accent);color:#fff}
+.btn.on{background:linear-gradient(90deg,rgba(255,122,92,.28),rgba(92,225,230,.12));
+  border-color:var(--accent);color:#fff}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap}
+
+/* ---------- 表单 ---------- */
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:7px;letter-spacing:.5px}
+.field input[type=text],.field input[type=number],.field select,.field textarea{
+  width:100%;background:var(--panel-solid);border:1px solid var(--line);color:var(--text);
+  border-radius:10px;padding:11px 13px;font-size:14px;font-family:inherit;outline:none;transition:.15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent)}
+.field textarea{resize:vertical;min-height:84px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--panel-solid);
+  border:1px solid var(--line);border-radius:20px;padding:6px 12px;font-size:13px;cursor:pointer;user-select:none;transition:.15s}
+.chip.on{border-color:var(--accent);background:rgba(255,122,92,.16);color:#fff}
+.timegrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.timegrid .chip{justify-content:center;font-size:12px}
+
+/* ---------- 标签 / 徽章 ---------- */
+.tag{display:inline-block;font-size:11px;padding:3px 9px;border-radius:8px;
+  background:rgba(92,225,230,.12);color:var(--accent2);border:1px solid rgba(92,225,230,.25);margin:2px}
+.tag.offer{background:rgba(255,122,92,.12);color:var(--accent);border-color:rgba(255,122,92,.3)}
+.tag.want{background:rgba(124,252,155,.12);color:var(--ok);border-color:rgba(124,252,155,.3)}
+.tag.team{background:rgba(92,225,230,.12);color:var(--accent2);border-color:rgba(92,225,230,.3)}
+
+/* ---------- 帖子 ---------- */
+.post{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:16px 18px;margin-bottom:12px}
+.post .head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.post .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.post .title{font-size:16px;font-weight:600}
+.post .author{font-size:12px;color:var(--muted);margin-left:auto}
+.post .desc{font-size:13px;color:#c8c8d8;line-height:1.7}
+.post .foot{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+/* ---------- AI 推荐结果 ---------- */
+.match{display:flex;gap:14px;align-items:flex-start;padding:14px 16px;border-radius:12px;
+  background:linear-gradient(90deg,rgba(255,122,92,.08),rgba(92,225,230,.04));
+  border:1px solid rgba(255,122,92,.25);margin-bottom:10px}
+.match .score{font-size:22px;font-weight:700;color:var(--accent);min-width:46px;text-align:center}
+.match .why{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.7}
+
+/* ---------- 提示条 ---------- */
+.hint{font-size:12px;color:var(--muted);background:var(--panel);border:1px dashed var(--line);
+  border-radius:10px;padding:10px 13px;line-height:1.7;margin-top:10px}
+.empty{color:var(--muted);font-size:13px;text-align:center;padding:40px 0}
+
+/* ---------- 技能归类提示（profile.html 用） ---------- */
+.assign-card{background:linear-gradient(90deg,rgba(255,122,92,.08),rgba(92,225,230,.05));
+  border:1px solid rgba(255,122,92,.28);border-radius:12px;padding:14px 16px;line-height:1.8}
+.assign-card .at{font-size:14px;font-weight:600;color:#fff}
+.assign-card .az{margin:8px 0;display:flex;flex-wrap:wrap;gap:8px}
+.assign-card .ah{font-size:12px;color:var(--muted)}
+
+/* ---------- 建筑成员工牌墙（skills.html ?zone=N 用） ---------- */
+.zonewall{max-width:1280px;margin:0 auto;padding:16px 16px 110px}
+.zw-head{text-align:center;margin:6px 0 26px}
+.zw-head .zt{font-size:32px;font-weight:800;letter-spacing:1px}
+.zw-head .zd{color:var(--muted);font-size:13px;margin-top:8px;line-height:1.7}
+.zw-head .zc{margin-top:12px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.zw-back{display:inline-block;font-size:12px;color:var(--accent2);
+  border:1px solid rgba(92,225,230,.35);padding:7px 15px;border-radius:9px;transition:.15s}
+.zw-back:hover{background:rgba(92,225,230,.12)}
+.zw-tip{text-align:center;font-size:11px;color:var(--muted);margin-bottom:22px}
+.zw-tip b{color:var(--accent2)}
+
+/* 标题块本身也是一个吸附点：避免加载时浏览器直接把标题顶掉去吸附第一页工牌 */
+.badge-intro{scroll-snap-align:start;scroll-margin-top:var(--nav-h)}
+
+/* 整页滚动吸附（只在工牌墙模式挂上 html.snap-y） */
+html.snap-y{scroll-snap-type:y proximity}
+
+/* 一页 = 最多 5 张工牌；占满一屏并作为一个吸附点 */
+.badge-page{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:52px;
+  min-height:calc(100vh - var(--nav-h));padding:28px 0 52px;
+  scroll-snap-align:start;scroll-snap-stop:always;scroll-margin-top:var(--nav-h)}
+
+/* 行：每行最多 3 张；用 grid 列宽上限控制尺寸，窄屏自动等比缩，永不换行 */
+.badge-row{display:grid;justify-content:center;gap:45px;margin:0}
+.badge-row[data-cols="3"]{grid-template-columns:repeat(3,minmax(0,345px))}
+.badge-row[data-cols="2"]{grid-template-columns:repeat(2,minmax(0,345px))}
+.badge-row[data-cols="1"]{grid-template-columns:minmax(0,345px)}
+
+/* 单个悬挂工牌：绳子在上，卡片在下，整体以顶端为轴摆动后停住。（尺寸 = 原 230px 的 1.5 倍） */
+/* 注意：入场前元素是 opacity:0 + translateY(-120vh)，会移到页面上方盖住表头。
+   必须 pointer-events:none，否则会拦截「回到沙盘」等按钮的点击（点了会命中隐形工牌）。 */
+.badge{position:relative;width:100%;max-width:345px;transform-origin:top center;
+  opacity:0;transform:translateY(-120vh) rotate(-8deg);pointer-events:none}
+.badge.in{animation:badgeDrop 1.15s cubic-bezier(.2,1.1,.35,1) forwards;pointer-events:auto}
+@keyframes badgeDrop{
+  0%  {opacity:0;transform:translateY(-120vh) rotate(-8deg)}
+  10% {opacity:1}
+  52% {transform:translateY(28px) rotate(5deg)}
+  70% {transform:translateY(-11px) rotate(-3deg)}
+  83% {transform:translateY(6px)  rotate(1.6deg)}
+  92% {transform:translateY(-3px) rotate(-0.7deg)}
+  100%{opacity:1;transform:translateY(0) rotate(0)}
+}
+.badge .string{width:3px;height:105px;margin:0 auto;border-radius:3px;
+  background:linear-gradient(180deg,rgba(255,255,255,0) 0%,var(--c,#fff) 45%,var(--c,#fff) 100%);
+  box-shadow:0 0 15px rgba(0,0,0,.5)}
+.badge .card-work{background:linear-gradient(180deg,rgba(255,255,255,.11),rgba(255,255,255,.04));
+  border:1px solid var(--line);border-top:4px solid var(--c,#fff);border-radius:24px;
+  padding:24px 22px 22px;text-align:center;box-shadow:0 30px 66px rgba(0,0,0,.45);transition:.18s}
+.badge .card-work:hover{border-color:var(--c,#fff);transform:translateY(-4px)}
+.card-work .photo{width:93px;height:93px;border-radius:50%;margin:0 auto 15px;
+  display:flex;align-items:center;justify-content:center;font-size:42px;
+  background:radial-gradient(circle at 34% 30%,var(--c,#fff),#181630);
+  color:#fff;border:3px solid var(--c,#fff)}
+.card-work .nm{font-size:27px;font-weight:700;letter-spacing:.5px}
+/* 已关注标签：挂在名字右侧的红框 */
+.card-work .nm .badge-followed{display:inline-block;margin-left:9px;font-size:14px;font-weight:600;
+  color:#ff5c5c;border:1.5px solid #ff5c5c;border-radius:7px;padding:1px 9px;vertical-align:middle;
+  background:rgba(255,92,92,.13);letter-spacing:0}
+.card-work .ag{font-size:18px;color:var(--muted);margin-top:3px}
+.card-work .sk{margin:15px 0 12px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.card-work .sk .tag{font-size:16px;padding:5px 13px;border-radius:12px;
+  background:color-mix(in srgb,var(--c,#fff) 18%,transparent);
+  color:#fff;border:1px solid color-mix(in srgb,var(--c,#fff) 45%,transparent);margin:0}
+.card-work .ct{font-size:16px;color:var(--accent2);margin-top:9px}
+.card-work .ft{font-size:16px;color:var(--muted);margin-top:8px;line-height:1.6}
+.card-work .bio{font-size:18px;color:#c8c8d8;margin-top:12px;line-height:1.6}
+.card-work .me{display:inline-block;font-size:15px;background:var(--accent);color:#fff;
+  border-radius:9px;padding:3px 11px;margin-left:9px;vertical-align:middle}
+
+/* ---------- 分区入口条（技能广场全局模式） ---------- */
+.zdoor{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:8px}
+.zdoor a{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  padding:12px 10px;text-align:center;transition:.15s;font-size:13px}
+.zdoor a:hover{transform:translateY(-3px)}
+.zdoor .n{font-size:13px;font-weight:600}
+.zdoor .c{font-size:11px;color:var(--muted);margin-top:3px}
+@media(max-width:900px){.zdoor{grid-template-columns:repeat(2,1fr)}}
+
+/* ---------- 沙盘侧栏（sandbox.html 用） ---------- */
+#sidebar{width:300px;flex-shrink:0;display:flex;flex-direction:column;
+  background:linear-gradient(180deg,rgba(20,18,30,.55),rgba(10,9,16,.55));
+  backdrop-filter:blur(16px) saturate(1.2);-webkit-backdrop-filter:blur(16px) saturate(1.2);
+  border-right:1px solid var(--line);overflow-y:auto}
+#sidebar h1{font-size:15px;padding:18px 20px 4px;letter-spacing:1px;color:#fff}
+#sidebar .sub{font-size:11px;color:var(--muted);padding:0 20px 12px}
+.legend{font-size:11px;color:var(--muted);line-height:1.9;padding:10px 20px 20px}
+.legend b{color:#cfcfe0}
+@media(max-width:820px){
+  .grid.cols-3,.grid.cols-2{grid-template-columns:1fr}
+  #topnav a{display:none}
+  #topnav a.active{display:inline-block}
+}
+
+/* ---------- 打字机激活态（js/typewriter.js 用） ---------- */
+input.twx-active,textarea.twx-active{
+  border-color:#e8a750 !important;
+  box-shadow:0 0 0 2px rgba(232,167,80,.22),0 0 16px rgba(232,167,80,.28) !important}
+
+/* 工牌：可点击进入临时聊天 */
+.badge .card-work{cursor:pointer;position:relative}
+.badge .card-work:hover{box-shadow:0 22px 50px rgba(0,0,0,.55),0 0 0 1px var(--c,#fff),
+  0 0 26px color-mix(in srgb,var(--c,#fff) 40%,transparent)}
+.card-work .chat-hint{margin-top:15px;font-size:16px;color:var(--c,#fff);opacity:.72;
+  border-top:1px dashed var(--line);padding-top:12px;transition:.15s}
+.badge .card-work:hover .chat-hint{opacity:1}
+
+/* 工牌名片浮层（替代原 chat 聊天页） */
+.badge-modal{position:fixed;inset:0;z-index:600;display:none;
+  background:rgba(0,0,0,.65);backdrop-filter:blur(6px);
+  align-items:center;justify-content:center;padding:24px}
+.badge-modal.open{display:flex;animation:bmFade .2s ease}
+@keyframes bmFade{from{opacity:0}to{opacity:1}}
+.badge-modal-card{background:var(--panel-solid,#1b1f1d);border:1px solid var(--line);
+  border-radius:20px;padding:32px 28px;max-width:420px;width:100%;text-align:center;
+  box-shadow:0 30px 80px rgba(0,0,0,.7);animation:bmPop .25s cubic-bezier(.34,1.56,.64,1)}
+@keyframes bmPop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+.badge-modal-card .bm-photo{width:110px;height:110px;border-radius:50%;margin:0 auto 16px;
+  font-size:56px;display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.06);border:3px solid var(--c,#5ce1e6)}
+.badge-modal-card .bm-name{font-size:28px;font-weight:700;letter-spacing:.5px}
+.badge-modal-card .bm-age{font-size:16px;color:var(--muted);margin-top:5px}
+.badge-modal-card .bm-skills{margin:18px 0 14px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.badge-modal-card .bm-skills .tag{font-size:15px;padding:5px 14px;border-radius:12px;
+  background:rgba(255,122,92,.12);color:var(--accent,#ff7a5c);border:1px solid rgba(255,122,92,.25)}
+.badge-modal-card .bm-row{font-size:15px;line-height:1.8;color:#c8c8d8;margin:6px 0}
+.badge-modal-card .bm-row b{color:var(--muted);font-weight:400;margin-right:6px}
+.badge-modal-card .bm-bio{font-size:15px;color:#c8c8d8;margin-top:14px;line-height:1.7;
+  padding:12px 14px;background:rgba(255,255,255,.04);border-radius:12px}
+.badge-modal-card .bm-actions{margin-top:22px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.badge-modal-card .bm-follow{padding:9px 24px;border:1px solid var(--accent,#ff7a5c);border-radius:10px;
+  background:transparent;color:var(--accent,#ff7a5c);font-size:14px;font-weight:600;cursor:pointer;
+  font-family:inherit;transition:.15s}
+.badge-modal-card .bm-follow:hover{background:rgba(255,122,92,.14)}
+.badge-modal-card .bm-follow.on{background:var(--accent,#ff7a5c);color:#fff}
+.badge-modal-card .bm-follow.on:hover{filter:brightness(1.1)}
+.badge-modal-card .bm-close{margin-top:0;padding:9px 28px;border:none;border-radius:10px;
+  background:var(--accent,#ff7a5c);color:#fff;font-size:14px;font-weight:600;cursor:pointer;
+  font-family:inherit;transition:.15s}
+.badge-modal-card .bm-close:hover{filter:brightness(1.12)}
+.badge-modal-card .bm-me{display:inline-block;font-size:13px;background:var(--accent,#ff7a5c);
+  color:#fff;padding:2px 10px;border-radius:999px;margin-left:8px;vertical-align:middle}
+
+/* 上传照片头像：填满所在圆形/方形容器，圆形继承父级圆角 */
+.face-img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block;background:#2a2a3a}
